@@ -232,6 +232,167 @@ main {
 .genre-card-featured .genre-name { font-size: 1.5rem; }
 .genre-card-featured .genre-count { margin-top: 0; padding-top: 0; text-align: right; }
 
+/* ---------- painel de estatísticas ---------- */
+
+.stats-panel {
+  margin-top: 26px;
+  padding: 22px 20px 16px;
+  background: var(--ink-raise);
+  border: 1px solid var(--line-soft);
+  border-radius: var(--r);
+}
+.stats-panel.hidden { display: none; }
+
+.stats-label {
+  margin: 0 0 6px;
+  font-family: var(--mono);
+  font-size: 0.64rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--bone-faint);
+}
+
+.rank-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.rank-name {
+  margin: 0;
+  font-family: var(--display);
+  font-size: clamp(1.15rem, 4.5vw, 1.5rem);
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+  text-transform: uppercase;
+  color: var(--ouro);
+}
+
+.rank-points {
+  margin: 0;
+  font-family: var(--mono);
+  font-size: 0.76rem;
+  color: var(--bone-dim);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.rank-points span { color: var(--bone); font-size: 1.15rem; }
+
+.rank-track {
+  height: 6px;
+  margin-top: 14px;
+  background: var(--ink);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.rank-fill {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, var(--laranja), var(--ouro));
+  transition: width 0.45s ease;
+}
+
+.rank-next {
+  margin: 7px 0 0;
+  font-family: var(--mono);
+  font-size: 0.66rem;
+  letter-spacing: 0.06em;
+  color: var(--bone-faint);
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 1px;
+  margin: 22px 0;
+  background: var(--line-soft);
+  border: 1px solid var(--line-soft);
+  border-radius: var(--r);
+  overflow: hidden;
+}
+
+.stat-cell {
+  background: var(--ink-raise);
+  padding: 13px 14px;
+}
+
+.stat-cell b {
+  display: block;
+  font-family: var(--mono);
+  font-size: 1.5rem;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  color: var(--bone);
+  font-variant-numeric: tabular-nums;
+  /* nomes de gênero longos não podem empurrar a grade */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* o total ("/12") fica menor que os acertos: o número que importa é o primeiro */
+.stat-cell b i {
+  font-style: normal;
+  font-size: 0.95rem;
+  color: var(--bone-faint);
+}
+
+.stat-cell > span {
+  display: block;
+  margin-top: 3px;
+  font-family: var(--mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--bone-faint);
+}
+
+/* distribuição: quanto de música bastou em cada acerto */
+.dist { display: flex; flex-direction: column; gap: 5px; }
+
+.dist-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--mono);
+  font-size: 0.7rem;
+}
+
+.dist-label {
+  width: 34px;
+  text-align: right;
+  color: var(--bone-dim);
+  flex-shrink: 0;
+}
+
+.dist-bar {
+  flex: 1;
+  min-width: 0;
+  height: 16px;
+  background: var(--ink);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.dist-fill {
+  display: block;
+  height: 100%;
+  background: repeating-linear-gradient(90deg, var(--laranja) 0 3px, var(--laranja-deep) 3px 6px);
+  transition: width 0.45s ease;
+}
+
+.dist-count {
+  width: 26px;
+  color: var(--bone);
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
+}
+
+.reset-btn { margin: 18px 0 0; }
+.reset-btn:hover { color: var(--danger, #ef4444); }
+
 /* ---------- tela de jogo ---------- */
 
 .link-btn {

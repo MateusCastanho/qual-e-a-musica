@@ -36,6 +36,57 @@ const GENRE_ACCENT = {
 
 const ATTEMPT_DURATIONS = [0.5, 2, 5, 10, 15]; // seconds
 
+// Pontos por acerto, conforme o trecho que bastou. Acertar com meio segundo
+// vale quase 7x acertar com 15s — é o que a patente premia.
+const STAGE_POINTS = [100, 60, 40, 25, 15];
+
+// Patentes por pontuação acumulada, da menor para a maior.
+const RANKS = [
+  { min: 0, name: "Ouvinte de Rádio" },
+  { min: 300, name: "Fã de Carteirinha" },
+  { min: 800, name: "DJ de Churrasco" },
+  { min: 1800, name: "Cabeça de Fone" },
+  { min: 3500, name: "Ouvido Absoluto" },
+  { min: 6000, name: "Enciclopédia Musical" },
+];
+
+function emptyStats() {
+  return {
+    rounds: 0,
+    wins: 0,
+    points: 0,
+    byStage: ATTEMPT_DURATIONS.map(() => 0),
+    byGenre: {}, // { [genreId]: { rounds, wins } }
+  };
+}
+
+function loadStats() {
+  try {
+    const raw = JSON.parse(localStorage.getItem("qem_stats"));
+    if (!raw || typeof raw !== "object") return emptyStats();
+    const base = emptyStats();
+    return {
+      rounds: Number(raw.rounds) || 0,
+      wins: Number(raw.wins) || 0,
+      points: Number(raw.points) || 0,
+      // o tamanho pode mudar se ATTEMPT_DURATIONS mudar: normaliza
+      byStage: base.byStage.map((_, i) => Number(raw.byStage && raw.byStage[i]) || 0),
+      byGenre: (raw.byGenre && typeof raw.byGenre === "object") ? raw.byGenre : {},
+    };
+  } catch {
+    return emptyStats();
+  }
+}
+
+function rankFor(points) {
+  let current = RANKS[0];
+  let next = null;
+  for (let i = 0; i < RANKS.length; i++) {
+    if (points >= RANKS[i].min) { current = RANKS[i]; next = RANKS[i + 1] || null; }
+  }
+  return { current, next };
+}
+
 const state = {
   genre: null,
   queue: [],
@@ -50,6 +101,7 @@ const state = {
   history: [], // { type: "skip" | "wrong" | "correct", text, sameArtist }
   streak: Number(localStorage.getItem("qem_streak") || 0),
   bestStreak: Number(localStorage.getItem("qem_best_streak") || 0),
+  stats: loadStats(),
 };
 
 // ---------- utils ----------
@@ -142,6 +194,62 @@ function updateStatsUI() {
 function songsByGenre(genreId) {
   if (genreId === TOP_GENRE_ID) return SONGS.filter((s) => s.top);
   return SONGS.filter((s) => s.genre === genreId);
+}
+
+function renderStatsPanel() {
+  const panel = $("#stats-panel");
+  const st = state.stats;
+
+  // Sem rodada nenhuma o painel só ocuparia espaço com zeros.
+  if (st.rounds === 0) {
+    panel.classList.add("hidden");
+    return;
+  }
+  panel.classList.remove("hidden");
+
+  const { current, next } = rankFor(st.points);
+  $("#rank-name").textContent = current.name;
+  $("#rank-points").textContent = st.points.toLocaleString("pt-BR");
+
+  if (next) {
+    const span = next.min - current.min;
+    const done = st.points - current.min;
+    $("#rank-fill").style.width = Math.min(100, (done / span) * 100) + "%";
+    $("#rank-next").textContent =
+      `faltam ${(next.min - st.points).toLocaleString("pt-BR")} pts para ${next.name}`;
+  } else {
+    $("#rank-fill").style.width = "100%";
+    $("#rank-next").textContent = "patente máxima alcançada";
+  }
+
+  $("#st-wins").textContent = st.wins;
+  $("#st-rounds").textContent = st.rounds;
+  $("#st-rate").textContent = Math.round((st.wins / st.rounds) * 100) + "%";
+  $("#st-best").textContent = state.bestStreak;
+
+  // Melhor gênero: só compara os que já têm alguma amostra, para não eleger
+  // um gênero com 1 rodada e 1 acerto.
+  const candidatos = Object.entries(st.byGenre).filter(([, v]) => v.rounds >= 3);
+  if (candidatos.length) {
+    const melhor = candidatos.sort((a, b) => (b[1].wins / b[1].rounds) - (a[1].wins / a[1].rounds))[0];
+    $("#st-fav").textContent = GENRE_LABELS[melhor[0]] || melhor[0];
+  } else {
+    $("#st-fav").textContent = "—";
+  }
+
+  const maior = Math.max(1, ...st.byStage);
+  const dist = $("#dist");
+  dist.innerHTML = "";
+  ATTEMPT_DURATIONS.forEach((dur, i) => {
+    const n = st.byStage[i];
+    const row = document.createElement("div");
+    row.className = "dist-row";
+    row.innerHTML =
+      `<span class="dist-label">${dur}s</span>` +
+      `<span class="dist-bar"><span class="dist-fill" style="width:${(n / maior) * 100}%"></span></span>` +
+      `<span class="dist-count">${n}</span>`;
+    dist.appendChild(row);
+  });
 }
 
 function renderGenreGrid() {
@@ -504,7 +612,31 @@ function persistStats() {
   updateStatsUI();
 }
 
+function recordRound(won) {
+  const st = state.stats;
+  st.rounds += 1;
+
+  const g = state.genre;
+  if (g) {
+    st.byGenre[g] = st.byGenre[g] || { rounds: 0, wins: 0 };
+    st.byGenre[g].rounds += 1;
+  }
+
+  if (won) {
+    st.wins += 1;
+    // attemptIndex ainda aponta para a etapa em que o acerto aconteceu
+    const stage = Math.min(state.attemptIndex, ATTEMPT_DURATIONS.length - 1);
+    st.byStage[stage] += 1;
+    st.points += STAGE_POINTS[stage];
+    if (g) st.byGenre[g].wins += 1;
+  }
+
+  localStorage.setItem("qem_stats", JSON.stringify(st));
+  renderStatsPanel();
+}
+
 function finishRound(won) {
+  recordRound(won);
   renderAttempts();
   $("#guess-input").disabled = true;
   $("#btn-guess").disabled = true;
@@ -549,7 +681,18 @@ window.onYouTubeIframeAPIReady = onYouTubeIframeAPIReady;
 
 document.addEventListener("DOMContentLoaded", () => {
   renderGenreGrid();
+  renderStatsPanel();
   updateStatsUI();
+
+  $("#btn-reset-stats").addEventListener("click", () => {
+    if (!confirm("Zerar todas as estatísticas, patente e recorde? Não dá para desfazer.")) return;
+    state.stats = emptyStats();
+    state.streak = 0;
+    state.bestStreak = 0;
+    localStorage.removeItem("qem_stats");
+    persistStats();
+    renderStatsPanel();
+  });
 
   $("#btn-change-genre").addEventListener("click", () => {
     if (state.player && state.playerReady) state.player.stopVideo();

@@ -30,6 +30,33 @@
   <section id="screen-genres" class="screen">
     <p class="subtitle">Meio segundo de música para começar. Cada erro libera mais tempo, até 15 segundos. Acerte com o menor trecho que conseguir.</p>
     <div id="genre-grid" class="genre-grid"></div>
+
+    <section id="stats-panel" class="stats-panel hidden" aria-label="Suas estatísticas">
+      <div class="rank-head">
+        <div>
+          <p class="stats-label">Patente</p>
+          <p class="rank-name" id="rank-name"></p>
+        </div>
+        <p class="rank-points"><span id="rank-points">0</span> pts</p>
+      </div>
+
+      <div class="rank-track">
+        <div class="rank-fill" id="rank-fill"></div>
+      </div>
+      <p class="rank-next" id="rank-next"></p>
+
+      <div class="stats-grid">
+        <div class="stat-cell"><b><span id="st-wins">0</span><i>/<span id="st-rounds">0</span></i></b><span>acertos</span></div>
+        <div class="stat-cell"><b id="st-rate">0%</b><span>aproveitamento</span></div>
+        <div class="stat-cell"><b id="st-best">0</b><span>melhor sequência</span></div>
+        <div class="stat-cell"><b id="st-fav">—</b><span>melhor gênero</span></div>
+      </div>
+
+      <p class="stats-label">Acertos por trecho</p>
+      <div class="dist" id="dist"></div>
+
+      <button type="button" id="btn-reset-stats" class="link-btn reset-btn">Zerar estatísticas</button>
+    </section>
   </section>
 
   <!-- JOGO -->
