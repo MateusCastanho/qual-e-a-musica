@@ -9,7 +9,9 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=Archivo+Black&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css">
+<!-- O ?v= força o navegador a buscar a versão nova em vez da que está em
+     cache. Ao mexer em style.css, app.js ou nos dados, incremente o número. -->
+<link rel="stylesheet" href="style.css?v=2">
 </head>
 <body>
 
@@ -115,9 +117,9 @@
   Trechos tocados via YouTube
 </footer>
 
-<script src="data/songs.js"></script>
-<script src="data/decoys.js"></script>
-<script src="app.js"></script>
+<script src="data/songs.js?v=2"></script>
+<script src="data/decoys.js?v=2"></script>
+<script src="app.js?v=2"></script>
 <script>
   var tag = document.createElement('script');
   tag.src = "https://www.youtube.com/iframe_api";
