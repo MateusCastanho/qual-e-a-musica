@@ -96,6 +96,9 @@ const state = {
   player: null,
   playerReady: false,
   playing: false,
+  videoDuration: 0, // duração real do vídeo, para distinguir de um anúncio
+  primed: false,    // já confirmamos estar dentro da música, com o som liberado?
+  primeTimer: null,
   solved: false,
   finished: false,
   history: [], // { type: "skip" | "wrong" | "correct", text, sameArtist }
@@ -403,6 +406,12 @@ function nextSong() {
   state.finished = false;
   state.startOffset = 0;
   state.history = [];
+  // A música anterior já não vale: descarta a preparação dela e silencia o
+  // player até confirmarmos que a nova está tocando (e não um anúncio).
+  stopPriming();
+  state.primed = false;
+  state.videoDuration = 0;
+  if (state.playerReady) state.player.mute();
 
   // Remover o iframe da revelação de verdade — só esconder o card deixa o
   // vídeo do YouTube tocando em segundo plano.
@@ -488,6 +497,9 @@ function loadCurrentSongIntoPlayer() {
 function onPlayerStateChanged(event) {
   if (event.data === YT.PlayerState.CUED) {
     const duration = state.player.getDuration() || 60;
+    // Guardado para distinguir a música de um anúncio: durante o anúncio,
+    // getDuration() devolve a duração DELE, não a do vídeo.
+    state.videoDuration = duration;
     // ~30% da duração costuma cair no primeiro verso/refrão, evitando
     // introduções longas (clipes oficiais às vezes têm 30-60s de cena antes
     // da música). Garante ainda que caibam os 15s do maior trecho.
@@ -498,27 +510,84 @@ function onPlayerStateChanged(event) {
   }
 }
 
-function primeBuffer() {
-  // Seeking + playing right when the user clicks isn't enough time for the
-  // player to buffer that point in the video, so short snippets (0.1s/0.5s)
-  // can end up silent. Pre-buffer around startOffset (muted) right after the
-  // song loads, so the real snippet plays start instantly.
+// Estamos tocando a música mesmo, no ponto certo — e não um anúncio?
+// Durante um anúncio o player devolve a duração e o tempo DO ANÚNCIO, então
+// as duas checagens juntas dão a resposta: a duração bate com a do vídeo e a
+// posição já alcançou o trecho para onde pedimos o seek.
+function isAtSongContent() {
   const player = state.player;
+  if (!player || !state.videoDuration) return false;
+  const durOk = Math.abs((player.getDuration() || 0) - state.videoDuration) < 2;
+  const posOk = (player.getCurrentTime() || 0) >= state.startOffset - 2;
+  return durOk && posOk;
+}
+
+function stopPriming() {
+  if (state.primeTimer) {
+    clearInterval(state.primeTimer);
+    state.primeTimer = null;
+  }
+}
+
+// Prepara o trecho tocando MUDO até chegar na música. Se o YouTube inserir
+// um anúncio, ele roda aqui, sem som, enquanto o botão ainda diz "Carregando".
+// O som só é liberado depois que confirmamos estar dentro da música.
+function primeBuffer(onReady) {
+  const player = state.player;
+  stopPriming();
+  state.primed = false;
+
   player.mute();
   player.seekTo(state.startOffset, true);
   player.playVideo();
-  setTimeout(() => {
-    player.pauseVideo();
-    player.seekTo(state.startOffset, true);
-    player.unMute();
-    player.setVolume(100);
-    $("#btn-play-snippet").disabled = false;
-    $("#play-btn-label").textContent = "Tocar trecho";
-  }, 1500);
+
+  const comecou = Date.now();
+  state.primeTimer = setInterval(() => {
+    if (isAtSongContent()) {
+      stopPriming();
+      player.pauseVideo();
+      player.seekTo(state.startOffset, true);
+      state.primed = true;
+      liberarBotao();
+      if (onReady) onReady();
+    } else if (Date.now() - comecou > 25000) {
+      // Anúncio muito longo ou reprodução bloqueada pelo navegador: libera o
+      // botão mesmo assim. O clique refaz a preparação, aí dentro de um
+      // gesto do usuário (que o celular aceita).
+      stopPriming();
+      player.pauseVideo();
+      state.primed = false;
+      liberarBotao();
+      if (onReady) onReady();
+    }
+  }, 250);
+}
+
+function liberarBotao() {
+  $("#btn-play-snippet").disabled = state.finished;
+  $("#play-btn-label").textContent = "Tocar trecho";
 }
 
 function playSnippet() {
   if (!state.playerReady || state.playing) return;
+
+  // Ainda não confirmamos estar dentro da música (anúncio rolando, ou o
+  // celular bloqueou a reprodução automática). Prepara agora — este clique é
+  // um gesto do usuário, que o navegador aceita — e só então toca com som.
+  if (!state.primed) {
+    $("#btn-play-snippet").disabled = true;
+    $("#play-btn-label").textContent = "Carregando...";
+    primeBuffer(() => {
+      if (state.primed && !state.finished) tocarComSom();
+      else liberarBotao();
+    });
+    return;
+  }
+
+  tocarComSom();
+}
+
+function tocarComSom() {
   state.playing = true;
   const duration = ATTEMPT_DURATIONS[Math.min(state.attemptIndex, ATTEMPT_DURATIONS.length - 1)];
   const btn = $("#btn-play-snippet");
@@ -538,7 +607,17 @@ function playSnippet() {
     fill.style.width = (duration / maxDuration) * 100 + "%";
   });
 
+  // Rede de segurança: se um anúncio entrar no meio do trecho, corta o som
+  // na hora em vez de deixar o jogador ouvir a propaganda.
+  const vigia = setInterval(() => {
+    if (!isAtSongContent()) {
+      state.player.mute();
+      state.primed = false;
+    }
+  }, 200);
+
   setTimeout(() => {
+    clearInterval(vigia);
     state.player.pauseVideo();
     state.player.seekTo(state.startOffset, true);
     state.playing = false;
@@ -695,7 +774,9 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   $("#btn-change-genre").addEventListener("click", () => {
-    if (state.player && state.playerReady) state.player.stopVideo();
+    stopPriming();
+    state.primed = false;
+    if (state.player && state.playerReady) { state.player.mute(); state.player.stopVideo(); }
     $("#reveal-video").innerHTML = "";
     $("#screen-game").classList.add("hidden");
     $("#screen-genres").classList.remove("hidden");

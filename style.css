@@ -709,6 +709,15 @@ footer {
   .guess-input-wrap { flex-basis: 100%; }
   .guess-form button { flex: 1; }
   .history-tag { width: 54px; }
+
+  /* Aqui os botões ficam ABAIXO do campo, então a lista aberta para baixo
+     cobriria o "Chutar" — o toque cairia numa sugestão em vez do botão.
+     Abrindo para cima ela só cobre o player, que não é usado ao digitar. */
+  .suggestions-box {
+    top: auto;
+    bottom: calc(100% + 5px);
+    max-height: 240px;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
