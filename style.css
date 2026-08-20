@@ -1,0 +1,558 @@
+/* ============================================================
+   Qual é a Música — direção visual: capa de disco brasileira
+   dos anos 60. Fundo ameixa, tipo pesado, cor com significado:
+   laranja = a marca, ouro = acertou o artista, verde = acertou.
+   ============================================================ */
+
+:root {
+  --ink: #1a1119;
+  --ink-raise: #241a23;
+  --ink-high: #2e2130;
+  --line: #3a2a38;
+  --line-soft: #2a1e29;
+
+  --bone: #f4ede3;
+  --bone-dim: #a89890;
+  --bone-faint: #6d5f68;
+
+  --laranja: #ff5a2c;
+  --laranja-deep: #d8431b;
+  --ouro: #e8b33c;
+  --verde: #3fa45b;
+
+  --display: "Archivo Black", "Archivo", Impact, sans-serif;
+  --body: "Archivo", -apple-system, "Segoe UI", Roboto, sans-serif;
+  --mono: "DM Mono", ui-monospace, "SF Mono", Consolas, monospace;
+
+  --r: 4px;
+}
+
+* { box-sizing: border-box; }
+
+html {
+  -webkit-text-size-adjust: 100%;
+  color-scheme: dark;
+}
+
+/* rótulo só para leitor de tela */
+.sr-only {
+  position: absolute;
+  width: 1px; height: 1px;
+  padding: 0; margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+button, input {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  margin: 0;
+  font-family: var(--body);
+  background: var(--ink);
+  color: var(--bone);
+  min-height: 100vh;
+  /* grão sutil de papel, para o fundo não ficar plano como um app */
+  background-image:
+    radial-gradient(ellipse 70% 50% at 50% 0%, rgba(255, 90, 44, 0.1), transparent 70%);
+}
+
+#player-slot {
+  position: absolute;
+  width: 1px; height: 1px;
+  overflow: hidden; opacity: 0;
+  pointer-events: none;
+}
+
+::selection { background: var(--laranja); color: var(--ink); }
+
+:focus-visible {
+  outline: 2px solid var(--laranja);
+  outline-offset: 3px;
+}
+
+/* ---------- cabeçalho ---------- */
+
+.topbar {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 44px 22px 0;
+}
+
+.topbar h1 {
+  margin: 0;
+  font-family: var(--display);
+  font-size: clamp(2.9rem, 12vw, 4.6rem);
+  line-height: 0.84;
+  letter-spacing: -0.035em;
+  text-transform: uppercase;
+  text-wrap: balance;
+}
+
+.topbar h1 .accent { color: var(--laranja); }
+
+.rule {
+  height: 2px;
+  background: var(--bone);
+  margin: 20px 0 10px;
+}
+
+/* Durante a partida o título encolhe e a marca vira uma linha só:
+   o que importa na tela é o player, não o cabeçalho. */
+body.in-game .topbar { padding-top: 26px; }
+body.in-game .topbar h1 { font-size: clamp(1.5rem, 5vw, 1.9rem); }
+body.in-game .topbar h1 br { display: none; }
+body.in-game .rule { margin: 13px 0 9px; }
+
+.stats {
+  display: flex;
+  gap: 22px;
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--bone-dim);
+}
+
+.stats strong {
+  color: var(--bone);
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+
+main {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 30px 22px 70px;
+}
+
+.screen.hidden { display: none; }
+
+/* ---------- seleção de gênero ---------- */
+
+.subtitle {
+  color: var(--bone-dim);
+  margin: 0 0 26px;
+  font-size: 0.98rem;
+  max-width: 42ch;
+  line-height: 1.5;
+}
+
+.genre-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(178px, 1fr));
+  gap: 10px;
+}
+
+.genre-card {
+  --chip: var(--laranja);
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-height: 128px;
+  font-family: var(--body);
+  background: var(--ink-raise);
+  border: 1px solid var(--line-soft);
+  border-radius: var(--r);
+  padding: 18px 18px 16px 22px;
+  text-align: left;
+  cursor: pointer;
+  color: var(--bone);
+  overflow: hidden;
+  transition: background 0.18s ease, border-color 0.18s ease, transform 0.18s ease;
+}
+
+/* faixa de cor: substitui o emoji como marca do gênero */
+.genre-card::before {
+  content: "";
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 5px;
+  background: var(--chip);
+  transition: width 0.18s ease;
+}
+
+.genre-card:hover:not(:disabled),
+.genre-card:focus-visible:not(:disabled) {
+  background: var(--ink-high);
+  border-color: var(--line);
+  transform: translateY(-2px);
+}
+
+.genre-card:hover:not(:disabled)::before { width: 9px; }
+
+.genre-card:disabled { opacity: 0.35; cursor: default; }
+
+.genre-name {
+  display: block;
+  font-family: var(--display);
+  font-size: 1.06rem;
+  line-height: 1.1;
+  letter-spacing: -0.015em;
+  text-transform: uppercase;
+}
+
+/* alinhado ao rodapé do card: o número fica na mesma linha em todos,
+   mesmo quando o nome do gênero quebra em duas linhas */
+.genre-count {
+  display: block;
+  margin-top: auto;
+  padding-top: 12px;
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.1em;
+  color: var(--bone-faint);
+  text-transform: uppercase;
+}
+
+.genre-count b {
+  color: var(--chip);
+  font-weight: 500;
+  font-size: 1.5rem;
+  letter-spacing: -0.02em;
+  display: block;
+  margin-bottom: 1px;
+}
+
+.genre-card-featured {
+  grid-column: 1 / -1;
+  background: linear-gradient(100deg, rgba(255, 90, 44, 0.16), rgba(232, 179, 60, 0.05) 60%, transparent);
+  border-color: rgba(255, 90, 44, 0.4);
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-height: 0;
+}
+
+.genre-card-featured .genre-name { font-size: 1.5rem; }
+.genre-card-featured .genre-count { margin-top: 0; padding-top: 0; text-align: right; }
+
+/* ---------- tela de jogo ---------- */
+
+.link-btn {
+  font-family: var(--mono);
+  background: none;
+  border: none;
+  color: var(--bone-faint);
+  cursor: pointer;
+  font-size: 0.72rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  padding: 0;
+  margin-bottom: 22px;
+}
+.link-btn:hover { color: var(--laranja); }
+
+.player-card {
+  background: var(--ink-raise);
+  border: 1px solid var(--line-soft);
+  border-radius: var(--r);
+  padding: 30px 26px 22px;
+  margin-bottom: 14px;
+}
+
+.play-btn {
+  display: block;
+  width: 100%;
+  font-family: var(--display);
+  background: var(--laranja);
+  color: var(--ink);
+  border: none;
+  border-radius: var(--r);
+  padding: 17px 24px;
+  font-size: 1rem;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background 0.14s ease;
+}
+.play-btn:hover:not(:disabled) { background: #ff7449; }
+.play-btn:disabled { background: var(--ink-high); color: var(--bone-faint); cursor: default; }
+
+/* ---- assinatura: a fita de tempo ---- */
+
+.tape {
+  margin-top: 22px;
+}
+
+.tape-track {
+  position: relative;
+  height: 26px;
+  background: var(--ink);
+  border: 1px solid var(--line-soft);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+/* trecho já liberado: fica marcado em tom fraco mesmo com a música parada,
+   para a fita mostrar quanto tempo o jogador tem disponível */
+.tape-unlocked {
+  position: absolute;
+  top: 0; bottom: 0; left: 0;
+  width: 0%;
+  background: rgba(255, 90, 44, 0.14);
+  transition: width 0.25s ease;
+}
+
+.tape-fill {
+  position: absolute;
+  top: 0; bottom: 0; left: 0;
+  width: 0%;
+  background: repeating-linear-gradient(
+    90deg,
+    var(--laranja) 0 3px,
+    var(--laranja-deep) 3px 6px
+  );
+  transition: width 0.08s linear;
+}
+
+.tape-tick {
+  position: absolute;
+  top: 0; bottom: 0;
+  width: 1px;
+  background: var(--line);
+}
+
+/* Cada rótulo é ancorado na posição da sua marca na fita, centralizado
+   nela. Segmentos de largura proporcional não servem: o trecho de 0.5s
+   ocupa 3% da fita e o texto transbordaria por cima do "2s". */
+.tape-scale {
+  position: relative;
+  height: 1.1em;
+  margin-top: 7px;
+  font-family: var(--mono);
+  font-size: 0.66rem;
+  letter-spacing: 0.06em;
+  color: var(--bone-faint);
+}
+
+.tape-scale span {
+  position: absolute;
+  top: 0;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  transition: color 0.18s ease;
+}
+
+/* Extremos ancorados nas bordas da fita, e não na marca: centralizado, o
+   "0.5s" (marca a 3%) encostaria no "2s" numa tela estreita. */
+.tape-scale span:first-child { left: 0 !important; transform: none; }
+.tape-scale span:last-child { transform: translateX(-100%); }
+
+.tape-scale span.done { color: var(--bone-dim); }
+.tape-scale span.now { color: var(--laranja); }
+
+/* ---------- palpite ---------- */
+
+.guess-form {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.guess-input-wrap {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+}
+
+.guess-form input {
+  width: 100%;
+  padding: 15px 16px;
+  border-radius: var(--r);
+  border: 1px solid var(--line);
+  background: var(--ink-raise);
+  color: var(--bone);
+  font-size: 0.98rem;
+  font-family: var(--body);
+}
+
+.guess-form input::placeholder { color: var(--bone-faint); }
+.guess-form input:focus {
+  outline: none;
+  border-color: var(--laranja);
+}
+
+.guess-form button {
+  font-family: var(--mono);
+  padding: 15px 17px;
+  border-radius: var(--r);
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--bone-dim);
+  font-size: 0.74rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: color 0.14s ease, border-color 0.14s ease, background 0.14s ease;
+  white-space: nowrap;
+}
+.guess-form button:hover:not(:disabled) { color: var(--bone); border-color: var(--bone-dim); }
+
+.guess-form button#btn-guess {
+  background: var(--bone);
+  color: var(--ink);
+  border-color: var(--bone);
+  font-weight: 500;
+}
+.guess-form button#btn-guess:hover:not(:disabled) { background: #fff; }
+.guess-form button:disabled { opacity: 0.4; cursor: default; }
+
+/* ---------- sugestões ---------- */
+
+.suggestions-box {
+  position: absolute;
+  top: calc(100% + 5px);
+  left: 0; right: 0;
+  z-index: 20;
+  background: var(--ink-high);
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  max-height: 290px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  box-shadow: 0 16px 34px rgba(0, 0, 0, 0.55);
+}
+.suggestions-box.hidden { display: none; }
+
+.suggestion-item {
+  padding: 11px 15px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  border-bottom: 1px solid var(--line-soft);
+  border-left: 3px solid transparent;
+}
+.suggestion-item:last-child { border-bottom: none; }
+.suggestion-item .sug-title { font-weight: 600; }
+.suggestion-item .sug-artist { color: var(--bone-faint); }
+.suggestion-item:hover,
+.suggestion-item.active {
+  background: var(--ink-raise);
+  border-left-color: var(--laranja);
+}
+
+/* ---------- histórico ---------- */
+
+.history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin-bottom: 22px;
+}
+
+.history-row {
+  display: flex;
+  align-items: baseline;
+  gap: 13px;
+  padding: 13px 16px;
+  border-radius: var(--r);
+  font-size: 0.93rem;
+  background: var(--ink-raise);
+  border: 1px solid var(--line-soft);
+  border-left: 3px solid var(--bone-faint);
+  animation: row-in 0.22s ease;
+}
+
+@keyframes row-in {
+  from { opacity: 0; transform: translateY(-5px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* rótulo textual: o estado não depende só da cor */
+.history-tag {
+  font-family: var(--mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--bone-faint);
+  flex-shrink: 0;
+  width: 62px;
+}
+
+.history-text { flex: 1; min-width: 0; }
+
+.history-row.skipped { color: var(--bone-faint); }
+
+.history-row.same-artist {
+  border-left-color: var(--ouro);
+  background: rgba(232, 179, 60, 0.07);
+}
+.history-row.same-artist .history-tag { color: var(--ouro); }
+
+.history-row.correct-guess {
+  border-left-color: var(--verde);
+  background: rgba(63, 164, 91, 0.1);
+}
+.history-row.correct-guess .history-tag { color: var(--verde); }
+
+/* ---------- revelação ---------- */
+
+.reveal-card {
+  background: var(--ink-raise);
+  border: 1px solid var(--line-soft);
+  border-radius: var(--r);
+  padding: 24px;
+}
+.reveal-card.hidden { display: none; }
+
+.reveal-label {
+  font-family: var(--mono);
+  font-size: 0.66rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--bone-faint);
+  margin: 0 0 8px;
+}
+
+#reveal-text {
+  font-family: var(--display);
+  font-size: 1.35rem;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+  margin: 0 0 20px;
+}
+
+.reveal-card iframe {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border-radius: var(--r);
+  border: none;
+  margin-top: 18px;
+}
+
+footer {
+  max-width: 640px;
+  margin: 0 auto;
+  color: var(--bone-faint);
+  font-family: var(--mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 0 22px 34px;
+}
+
+.shake { animation: shake 0.3s; }
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-5px); }
+  75% { transform: translateX(5px); }
+}
+
+@media (max-width: 460px) {
+  .guess-form { flex-wrap: wrap; }
+  .guess-input-wrap { flex-basis: 100%; }
+  .guess-form button { flex: 1; }
+  .history-tag { width: 54px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

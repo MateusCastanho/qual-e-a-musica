@@ -1,0 +1,594 @@
+/* global SONGS, YT */
+
+// "top2000" é um gênero virtual: não filtra por campo `genre`, e sim pelo
+// campo `top` (que pode marcar músicas de qualquer gênero, inclusive
+// duplicando uma que já aparece em outro card).
+const TOP_GENRE_ID = "top2000";
+
+const GENRE_LABELS = {
+  "top2000": "Top 2000+",
+  "sertanejo": "Sertanejo",
+  "pagode-samba": "Pagode / Samba",
+  "forro": "Forró",
+  "mpb": "MPB",
+  "funk": "Funk",
+  "rock": "Rock Nacional",
+  "axe-bossa": "Axé / Bossa Nova",
+  "pop": "Pop",
+  "rap": "Rap",
+  "gospel": "Gospel",
+};
+
+// Cada gênero tem uma cor própria, que marca o card no lugar de um emoji.
+const GENRE_ACCENT = {
+  "top2000": "#ff5a2c",
+  "sertanejo": "#e8b33c",
+  "pagode-samba": "#4fb3a4",
+  "forro": "#f08a3c",
+  "mpb": "#86a85e",
+  "funk": "#e8447e",
+  "rock": "#d4402b",
+  "axe-bossa": "#3fa45b",
+  "pop": "#a374d9",
+  "rap": "#7c8fa8",
+  "gospel": "#d9c05a",
+};
+
+const ATTEMPT_DURATIONS = [0.5, 2, 5, 10, 15]; // seconds
+
+const state = {
+  genre: null,
+  queue: [],
+  currentSong: null,
+  attemptIndex: 0, // 0-based, index into ATTEMPT_DURATIONS
+  startOffset: 0,
+  player: null,
+  playerReady: false,
+  playing: false,
+  solved: false,
+  finished: false,
+  history: [], // { type: "skip" | "wrong" | "correct", text, sameArtist }
+  streak: Number(localStorage.getItem("qem_streak") || 0),
+  bestStreak: Number(localStorage.getItem("qem_best_streak") || 0),
+};
+
+// ---------- utils ----------
+
+function normalize(str) {
+  return (str || "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .replace(/&/g, " e ")
+    .replace(/\(.*?\)/g, "")
+    .replace(/\b(feat|ft|part)\.?\b.*$/i, "")
+    .replace(/[^a-z0-9 ]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+// Distância de edição limitada: devolve 99 se claramente maior que 2.
+function editDistance(a, b) {
+  if (Math.abs(a.length - b.length) > 2) return 99;
+  const prev = new Array(b.length + 1);
+  const curr = new Array(b.length + 1);
+  for (let j = 0; j <= b.length; j++) prev[j] = j;
+  for (let i = 1; i <= a.length; i++) {
+    curr[0] = i;
+    for (let j = 1; j <= b.length; j++) {
+      curr[j] = Math.min(
+        prev[j] + 1,
+        curr[j - 1] + 1,
+        prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1)
+      );
+    }
+    for (let j = 0; j <= b.length; j++) prev[j] = curr[j];
+  }
+  return prev[b.length];
+}
+
+// Compara já-normalizados, aceitando pequenos erros de digitação em textos maiores.
+function fuzzyEquals(guess, target) {
+  if (guess === target) return true;
+  if (target.length < 5) return false;
+  const tolerance = target.length >= 10 ? 2 : 1;
+  return editDistance(guess, target) <= tolerance;
+}
+
+function shuffle(arr) {
+  const a = arr.slice();
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function $(sel) { return document.querySelector(sel); }
+
+function allGuessableSongs() {
+  // Reais primeiro: se uma isca repetir título de uma música real, a real vence.
+  const decoys = typeof DECOY_SONGS !== "undefined" ? DECOY_SONGS : [];
+  return SONGS.concat(decoys);
+}
+
+function findSongByGuess(guessRaw) {
+  const guessNorm = normalize(guessRaw);
+  if (!guessNorm) return null;
+  const pool = allGuessableSongs();
+
+  let found = pool.find((s) => fuzzyEquals(guessNorm, normalize(`${s.title} ${s.artist}`)));
+  if (found) return found;
+
+  found = pool.find((s) => fuzzyEquals(guessNorm, normalize(s.title)));
+  if (found) return found;
+
+  found = pool.find((s) => {
+    const t = normalize(s.title);
+    // t precisa de tamanho mínimo: título de 1-2 letras (ex.: "É") bateria
+    // com qualquer chute que contenha essas letras.
+    return guessNorm.length >= 3 && t.length >= 4 && (t.includes(guessNorm) || guessNorm.includes(t));
+  });
+  return found || null;
+}
+
+function updateStatsUI() {
+  $("#streak").textContent = state.streak;
+  $("#best-streak").textContent = state.bestStreak;
+}
+
+// ---------- genre screen ----------
+
+function songsByGenre(genreId) {
+  if (genreId === TOP_GENRE_ID) return SONGS.filter((s) => s.top);
+  return SONGS.filter((s) => s.genre === genreId);
+}
+
+function renderGenreGrid() {
+  const grid = $("#genre-grid");
+  grid.innerHTML = "";
+  Object.keys(GENRE_LABELS).forEach((genreId) => {
+    const count = songsByGenre(genreId).length;
+    const card = document.createElement("button");
+    card.className = genreId === TOP_GENRE_ID ? "genre-card genre-card-featured" : "genre-card";
+    card.disabled = count === 0;
+    card.style.setProperty("--chip", GENRE_ACCENT[genreId]);
+    card.innerHTML =
+      `<span class="genre-name">${GENRE_LABELS[genreId]}</span>` +
+      `<span class="genre-count"><b>${count}</b>músicas</span>`;
+    card.addEventListener("click", () => startGenre(genreId));
+    grid.appendChild(card);
+  });
+}
+
+function startGenre(genreId) {
+  state.genre = genreId;
+  state.queue = shuffle(songsByGenre(genreId));
+  $("#screen-genres").classList.add("hidden");
+  $("#screen-game").classList.remove("hidden");
+  document.body.classList.add("in-game");
+  nextSong();
+}
+
+// Autocomplete própria (não o <datalist> nativo): o datalist filtra por
+// substring literal, então "sao paulo" não encontra "São Paulo". Aqui a
+// filtragem usa normalize(), então acento/maiúsculas/pequenos erros não
+// atrapalham — deliberadamente construída com TODAS as músicas (todo
+// gênero), não só as do gênero em jogo, pra não entregar a resposta quando
+// um gênero tem poucas músicas.
+let suggestionPool = null;
+let activeSuggestionIndex = -1;
+let currentSuggestionMatches = [];
+
+function getSuggestionPool() {
+  if (suggestionPool) return suggestionPool;
+  const seen = new Set();
+  suggestionPool = allGuessableSongs()
+    .filter((s) => {
+      const key = normalize(`${s.title} ${s.artist}`);
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    })
+    .map((s) => ({
+      song: s,
+      searchText: normalize(`${s.title} ${s.artist}`),
+      titleNorm: normalize(s.title),
+    }));
+  return suggestionPool;
+}
+
+function renderSuggestions(query) {
+  const box = $("#suggestions-box");
+  const q = normalize(query);
+  activeSuggestionIndex = -1;
+
+  if (!q) {
+    closeSuggestions();
+    return;
+  }
+
+  const matches = getSuggestionPool()
+    .filter((e) => e.searchText.includes(q))
+    .sort((a, b) => {
+      // título começando com a busca aparece primeiro
+      const aStarts = a.titleNorm.startsWith(q) ? 0 : 1;
+      const bStarts = b.titleNorm.startsWith(q) ? 0 : 1;
+      return aStarts - bStarts;
+    })
+    .slice(0, 8);
+
+  currentSuggestionMatches = matches.map((e) => e.song);
+
+  if (matches.length === 0) {
+    closeSuggestions();
+    return;
+  }
+
+  box.innerHTML = "";
+  matches.forEach((e, i) => {
+    const item = document.createElement("div");
+    item.className = "suggestion-item";
+    item.setAttribute("role", "option");
+    item.setAttribute("aria-selected", "false");
+    item.id = "sug-" + i;
+    item.innerHTML = `<span class="sug-title"></span> <span class="sug-artist"></span>`;
+    item.querySelector(".sug-title").textContent = e.song.title;
+    item.querySelector(".sug-artist").textContent = "- " + e.song.artist;
+    item.addEventListener("mousedown", (ev) => {
+      // mousedown (não click) para disparar antes do blur do input
+      ev.preventDefault();
+      selectSuggestion(e.song);
+    });
+    box.appendChild(item);
+  });
+  box.classList.remove("hidden");
+  $("#guess-input").setAttribute("aria-expanded", "true");
+}
+
+function selectSuggestion(song) {
+  const input = $("#guess-input");
+  input.value = `${song.title} - ${song.artist}`;
+  closeSuggestions();
+  input.focus();
+}
+
+function closeSuggestions() {
+  const box = $("#suggestions-box");
+  box.classList.add("hidden");
+  box.innerHTML = "";
+  activeSuggestionIndex = -1;
+  currentSuggestionMatches = [];
+  const input = $("#guess-input");
+  input.setAttribute("aria-expanded", "false");
+  input.removeAttribute("aria-activedescendant");
+}
+
+function moveSuggestionActive(delta) {
+  const box = $("#suggestions-box");
+  const items = [...box.querySelectorAll(".suggestion-item")];
+  if (items.length === 0) return;
+
+  const prev = items[activeSuggestionIndex];
+  if (prev) {
+    prev.classList.remove("active");
+    prev.setAttribute("aria-selected", "false");
+  }
+
+  activeSuggestionIndex = (activeSuggestionIndex + delta + items.length) % items.length;
+  const item = items[activeSuggestionIndex];
+  item.classList.add("active");
+  item.setAttribute("aria-selected", "true");
+  item.scrollIntoView({ block: "nearest" });
+  $("#guess-input").setAttribute("aria-activedescendant", item.id);
+}
+
+// ---------- game flow ----------
+
+function nextSong() {
+  if (state.queue.length === 0) {
+    state.queue = shuffle(songsByGenre(state.genre));
+  }
+  state.currentSong = state.queue.pop();
+  state.attemptIndex = 0;
+  state.solved = false;
+  state.finished = false;
+  state.startOffset = 0;
+  state.history = [];
+
+  // Remover o iframe da revelação de verdade — só esconder o card deixa o
+  // vídeo do YouTube tocando em segundo plano.
+  $("#reveal-video").innerHTML = "";
+  $("#reveal-card").classList.add("hidden");
+  $("#guess-input").value = "";
+  closeSuggestions();
+  $("#guess-input").disabled = false;
+  $("#btn-guess").disabled = false;
+  $("#btn-skip").disabled = false;
+  $("#btn-play-snippet").disabled = true;
+  $("#play-btn-label").textContent = "Carregando...";
+
+  renderAttempts();
+  renderHistory();
+  loadCurrentSongIntoPlayer();
+}
+
+function renderHistory() {
+  const list = $("#history-list");
+  list.innerHTML = "";
+  state.history.forEach((entry) => {
+    const row = document.createElement("div");
+    let cls, tag, text;
+    if (entry.type === "skip") {
+      cls = "skipped"; tag = "Pulou"; text = "—";
+    } else if (entry.type === "correct") {
+      cls = "correct-guess"; tag = "Acertou"; text = entry.text;
+    } else if (entry.sameArtist) {
+      cls = "same-artist"; tag = "Artista"; text = entry.text;
+    } else {
+      cls = "wrong-guess"; tag = "Errou"; text = entry.text;
+    }
+    row.className = "history-row " + cls;
+    row.innerHTML =
+      `<span class="history-tag">${tag}</span>` +
+      `<span class="history-text"></span>`;
+    row.querySelector(".history-text").textContent = text;
+    list.appendChild(row);
+  });
+}
+
+// A fita de tempo: as marcas ficam na posição proporcional de cada etapa
+// dentro dos 15s totais, então a escala é honesta — 2s ocupa mesmo 13% dela.
+const MAX_DURATION = ATTEMPT_DURATIONS[ATTEMPT_DURATIONS.length - 1];
+
+function renderAttempts() {
+  const track = $("#tape-track");
+  const scale = $("#tape-scale");
+
+  track.querySelectorAll(".tape-tick").forEach((t) => t.remove());
+  ATTEMPT_DURATIONS.slice(0, -1).forEach((dur) => {
+    const tick = document.createElement("span");
+    tick.className = "tape-tick";
+    tick.style.left = (dur / MAX_DURATION) * 100 + "%";
+    track.appendChild(tick);
+  });
+
+  scale.innerHTML = "";
+  ATTEMPT_DURATIONS.forEach((dur, i) => {
+    const seg = document.createElement("span");
+    seg.style.left = (dur / MAX_DURATION) * 100 + "%";
+    seg.textContent = dur + "s";
+    if (i < state.attemptIndex) seg.className = "done";
+    if (i === state.attemptIndex && !state.finished) seg.className = "now";
+    scale.appendChild(seg);
+  });
+
+  const current = ATTEMPT_DURATIONS[Math.min(state.attemptIndex, ATTEMPT_DURATIONS.length - 1)];
+  $("#tape-unlocked").style.width = (current / MAX_DURATION) * 100 + "%";
+  $("#current-duration").textContent = current;
+}
+
+function loadCurrentSongIntoPlayer() {
+  if (!state.playerReady) {
+    // player not ready yet, retry shortly
+    setTimeout(loadCurrentSongIntoPlayer, 200);
+    return;
+  }
+  state.player.cueVideoById(state.currentSong.youtubeId);
+}
+
+function onPlayerStateChanged(event) {
+  if (event.data === YT.PlayerState.CUED) {
+    const duration = state.player.getDuration() || 60;
+    // ~30% da duração costuma cair no primeiro verso/refrão, evitando
+    // introduções longas (clipes oficiais às vezes têm 30-60s de cena antes
+    // da música). Garante ainda que caibam os 15s do maior trecho.
+    let offset = Math.max(15, Math.min(duration * 0.3, 90));
+    offset = Math.min(offset, Math.max(0, duration - 20));
+    state.startOffset = offset;
+    primeBuffer();
+  }
+}
+
+function primeBuffer() {
+  // Seeking + playing right when the user clicks isn't enough time for the
+  // player to buffer that point in the video, so short snippets (0.1s/0.5s)
+  // can end up silent. Pre-buffer around startOffset (muted) right after the
+  // song loads, so the real snippet plays start instantly.
+  const player = state.player;
+  player.mute();
+  player.seekTo(state.startOffset, true);
+  player.playVideo();
+  setTimeout(() => {
+    player.pauseVideo();
+    player.seekTo(state.startOffset, true);
+    player.unMute();
+    player.setVolume(100);
+    $("#btn-play-snippet").disabled = false;
+    $("#play-btn-label").textContent = "Tocar trecho";
+  }, 1500);
+}
+
+function playSnippet() {
+  if (!state.playerReady || state.playing) return;
+  state.playing = true;
+  const duration = ATTEMPT_DURATIONS[Math.min(state.attemptIndex, ATTEMPT_DURATIONS.length - 1)];
+  const btn = $("#btn-play-snippet");
+  const fill = $("#tape-fill");
+  btn.disabled = true;
+
+  state.player.unMute();
+  state.player.setVolume(100);
+  state.player.seekTo(state.startOffset, true);
+  state.player.playVideo();
+
+  const maxDuration = ATTEMPT_DURATIONS[ATTEMPT_DURATIONS.length - 1];
+  fill.style.transition = "none";
+  fill.style.width = "0%";
+  requestAnimationFrame(() => {
+    fill.style.transition = `width ${duration}s linear`;
+    fill.style.width = (duration / maxDuration) * 100 + "%";
+  });
+
+  setTimeout(() => {
+    state.player.pauseVideo();
+    state.player.seekTo(state.startOffset, true);
+    state.playing = false;
+    btn.disabled = state.finished;
+  }, duration * 1000);
+}
+
+function handleGuess(guessRaw) {
+  if (state.finished) return;
+  if (!guessRaw || !guessRaw.trim()) return;
+
+  const guessedSong = findSongByGuess(guessRaw);
+  const isCorrect = !!guessedSong && guessedSong.id === state.currentSong.id;
+  const sameArtist =
+    !isCorrect && !!guessedSong && normalize(guessedSong.artist) === normalize(state.currentSong.artist);
+
+  const entryText = guessedSong ? `${guessedSong.title} - ${guessedSong.artist}` : guessRaw.trim();
+
+  if (isCorrect) {
+    state.history.push({ type: "correct", text: entryText });
+    state.solved = true;
+    state.finished = true;
+    state.streak += 1;
+    if (state.streak > state.bestStreak) state.bestStreak = state.streak;
+    persistStats();
+    renderHistory();
+    finishRound(true);
+    return;
+  }
+
+  const input = $("#guess-input");
+  input.classList.add("shake");
+  setTimeout(() => input.classList.remove("shake"), 350);
+
+  state.history.push({ type: "wrong", text: entryText, sameArtist });
+  state.attemptIndex += 1;
+
+  if (state.attemptIndex >= ATTEMPT_DURATIONS.length) {
+    state.finished = true;
+    state.streak = 0;
+    persistStats();
+    renderHistory();
+    finishRound(false);
+    return;
+  }
+
+  renderAttempts();
+  renderHistory();
+  $("#guess-input").value = "";
+}
+
+function handleSkip() {
+  if (state.finished) return;
+  state.history.push({ type: "skip" });
+  state.attemptIndex += 1;
+  if (state.attemptIndex >= ATTEMPT_DURATIONS.length) {
+    state.finished = true;
+    state.streak = 0;
+    persistStats();
+    renderHistory();
+    finishRound(false);
+    return;
+  }
+  renderAttempts();
+  renderHistory();
+}
+
+function persistStats() {
+  localStorage.setItem("qem_streak", state.streak);
+  localStorage.setItem("qem_best_streak", state.bestStreak);
+  updateStatsUI();
+}
+
+function finishRound(won) {
+  renderAttempts();
+  $("#guess-input").disabled = true;
+  $("#btn-guess").disabled = true;
+  $("#btn-skip").disabled = true;
+  $("#btn-play-snippet").disabled = true;
+
+  const song = state.currentSong;
+  $("#reveal-label").textContent = won ? "Você acertou" : "A música era";
+  $("#reveal-text").textContent = `${song.title} — ${song.artist}`;
+  $("#reveal-video").innerHTML =
+    `<iframe src="https://www.youtube.com/embed/${song.youtubeId}?start=${Math.floor(state.startOffset)}" title="Vídeo: ${song.title} — ${song.artist}" allow="autoplay; encrypted-media" allowfullscreen loading="lazy"></iframe>`;
+  $("#reveal-card").classList.remove("hidden");
+}
+
+// ---------- YouTube API ----------
+
+function onYouTubeIframeAPIReady() {
+  const el = document.createElement("div");
+  $("#player-slot").appendChild(el);
+  state.player = new YT.Player(el, {
+    height: "1",
+    width: "1",
+    playerVars: { controls: 0, disablekb: 1, modestbranding: 1 },
+    events: {
+      onReady: () => {
+        state.playerReady = true;
+        // O iframe do player é invisível: sem isto ele entra na ordem de
+        // tabulação e quem navega por teclado dá dois Tabs no vazio antes
+        // de chegar ao conteúdo.
+        $("#player-slot").querySelectorAll("iframe").forEach((f) => {
+          f.setAttribute("tabindex", "-1");
+          f.setAttribute("aria-hidden", "true");
+        });
+      },
+      onStateChange: onPlayerStateChanged,
+    },
+  });
+}
+window.onYouTubeIframeAPIReady = onYouTubeIframeAPIReady;
+
+// ---------- wiring ----------
+
+document.addEventListener("DOMContentLoaded", () => {
+  renderGenreGrid();
+  updateStatsUI();
+
+  $("#btn-change-genre").addEventListener("click", () => {
+    if (state.player && state.playerReady) state.player.stopVideo();
+    $("#reveal-video").innerHTML = "";
+    $("#screen-game").classList.add("hidden");
+    $("#screen-genres").classList.remove("hidden");
+    document.body.classList.remove("in-game");
+  });
+
+  $("#btn-play-snippet").addEventListener("click", playSnippet);
+
+  $("#guess-form").addEventListener("submit", (e) => {
+    e.preventDefault();
+    closeSuggestions();
+    handleGuess($("#guess-input").value);
+  });
+
+  const guessInput = $("#guess-input");
+  guessInput.addEventListener("input", () => renderSuggestions(guessInput.value));
+  guessInput.addEventListener("blur", () => closeSuggestions());
+  guessInput.addEventListener("keydown", (e) => {
+    const box = $("#suggestions-box");
+    const hasOpenSuggestions = !box.classList.contains("hidden");
+    if (!hasOpenSuggestions) return;
+
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      moveSuggestionActive(1);
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      moveSuggestionActive(-1);
+    } else if (e.key === "Escape") {
+      closeSuggestions();
+    } else if (e.key === "Enter" && activeSuggestionIndex >= 0) {
+      e.preventDefault();
+      selectSuggestion(currentSuggestionMatches[activeSuggestionIndex]);
+    }
+  });
+
+  $("#btn-skip").addEventListener("click", handleSkip);
+  $("#btn-next-song").addEventListener("click", nextSong);
+});

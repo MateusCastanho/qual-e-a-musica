@@ -1,0 +1,11 @@
+# Skills instaladas localmente — não fazem parte do site
+.agents/
+.claude/
+skills-lock.json
+
+# Dependências e temporários
+node_modules/
+package-lock.json
+*.log
+.DS_Store
+Thumbs.db

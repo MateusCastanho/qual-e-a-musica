@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#1a1119">
+<title>Qual é a Música?</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=Archivo+Black&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div id="player-slot" aria-hidden="true"></div>
+
+<header class="topbar">
+  <h1>Qual é a <br>Música<span class="accent">?</span></h1>
+  <div class="rule"></div>
+  <div class="stats" id="stats">
+    <span>Sequência <strong id="streak">0</strong></span>
+    <span>Recorde <strong id="best-streak">0</strong></span>
+  </div>
+</header>
+
+<main>
+
+  <!-- ESCOLHA DE GÊNERO -->
+  <section id="screen-genres" class="screen">
+    <p class="subtitle">Meio segundo de música para começar. Cada erro libera mais tempo, até 15 segundos. Acerte com o menor trecho que conseguir.</p>
+    <div id="genre-grid" class="genre-grid"></div>
+  </section>
+
+  <!-- JOGO -->
+  <section id="screen-game" class="screen hidden">
+    <button id="btn-change-genre" class="link-btn">← Trocar gênero</button>
+
+    <div class="player-card">
+      <button id="btn-play-snippet" class="play-btn">
+        <span id="play-btn-label">Tocar trecho</span> · <span id="current-duration">0.5</span>s
+      </button>
+
+      <div class="tape">
+        <div class="tape-track" id="tape-track">
+          <div class="tape-unlocked" id="tape-unlocked"></div>
+          <div class="tape-fill" id="tape-fill"></div>
+        </div>
+        <div class="tape-scale" id="tape-scale"></div>
+      </div>
+    </div>
+
+    <form id="guess-form" class="guess-form" autocomplete="off">
+      <div class="guess-input-wrap">
+        <label class="sr-only" for="guess-input">Seu palpite</label>
+        <input
+          id="guess-input"
+          type="text"
+          placeholder="Nome da música ou do artista…"
+          autocomplete="off"
+          autocapitalize="off"
+          spellcheck="false"
+          role="combobox"
+          aria-expanded="false"
+          aria-autocomplete="list"
+          aria-controls="suggestions-box"
+        >
+        <div id="suggestions-box" class="suggestions-box hidden" role="listbox" aria-label="Sugestões de músicas"></div>
+      </div>
+      <button type="submit" id="btn-guess">Chutar</button>
+      <button type="button" id="btn-skip">Pular</button>
+    </form>
+
+    <div class="history-list" id="history-list" aria-live="polite"></div>
+
+    <div id="reveal-card" class="reveal-card hidden" aria-live="polite">
+      <p class="reveal-label" id="reveal-label">A música era</p>
+      <p id="reveal-text"></p>
+      <button id="btn-next-song" class="play-btn">Próxima música</button>
+      <div id="reveal-video"></div>
+    </div>
+
+  </section>
+
+</main>
+
+<footer>
+  Trechos tocados via YouTube
+</footer>
+
+<script src="data/songs.js"></script>
+<script src="data/decoys.js"></script>
+<script src="app.js"></script>
+<script>
+  var tag = document.createElement('script');
+  tag.src = "https://www.youtube.com/iframe_api";
+  var firstScriptTag = document.getElementsByTagName('script')[0];
+  firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+</script>
+</body>
+</html>
