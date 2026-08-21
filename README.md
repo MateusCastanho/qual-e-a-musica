@@ -4,7 +4,7 @@ Jogo de adivinhar música brasileira. Você ouve meio segundo de um trecho e ten
 acertar o nome. Cada erro libera mais tempo — 2s, 5s, 10s, 15s — e a graça é
 acertar com o menor trecho possível.
 
-**447 músicas** em 11 gêneros: sertanejo, pagode/samba, forró, MPB, funk, rock
+**634 músicas** em 11 gêneros: sertanejo, pagode/samba, forró, MPB, funk, rock
 nacional, axé/bossa nova, pop, rap, gospel, além da categoria "Top 2000+".
 
 ## Como funciona
