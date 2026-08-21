@@ -11,7 +11,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=Archivo+Black&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <!-- O ?v= força o navegador a buscar a versão nova em vez da que está em
      cache. Ao mexer em style.css, app.js ou nos dados, incremente o número. -->
-<link rel="stylesheet" href="style.css?v=9">
+<link rel="stylesheet" href="style.css?v=10">
 </head>
 <body>
 
@@ -28,23 +28,17 @@
 
   <!-- ESCOLHA DE GÊNERO -->
   <section id="screen-genres" class="screen">
-    <p class="subtitle">Meio segundo de música para começar. Cada erro libera mais tempo, até 15 segundos. Acerte com o menor trecho que conseguir.</p>
-    <div id="daily-card" class="daily-card"></div>
+    <nav class="abas" role="tablist" aria-label="Modos de jogo">
+      <button type="button" class="aba ativa" data-aba="hoje" role="tab" aria-selected="true">Hoje</button>
+      <button type="button" class="aba" data-aba="desafios" role="tab" aria-selected="false">Desafios</button>
+      <button type="button" class="aba" data-aba="livre" role="tab" aria-selected="false">Livre</button>
+    </nav>
 
-    <div class="modo">
-      <button type="button" id="btn-hits" class="modo-btn" aria-pressed="true">Só os hits</button>
-      <span class="modo-hint" id="hits-hint"></span>
-    </div>
+    <!-- HOJE -->
+    <div class="painel" id="painel-hoje" role="tabpanel">
+      <div id="daily-card" class="daily-card"></div>
 
-    <div id="genre-grid" class="genre-grid"></div>
-
-    <p class="secao-label">Por década</p>
-    <div id="decade-grid" class="genre-grid"></div>
-
-    <p class="secao-label" id="desafios-label">Desafios · 10 músicas, placar no fim</p>
-    <div id="desafio-grid" class="desafio-lista"></div>
-
-    <section id="stats-panel" class="stats-panel hidden" aria-label="Suas estatísticas">
+      <section id="stats-panel" class="stats-panel hidden" aria-label="Suas estatísticas">
       <div class="rank-head">
         <div>
           <p class="stats-label">Patente</p>
@@ -68,8 +62,31 @@
       <p class="stats-label">Acertos por trecho</p>
       <div class="dist" id="dist"></div>
 
-      <button type="button" id="btn-reset-stats" class="link-btn reset-btn">Zerar estatísticas</button>
-    </section>
+        <button type="button" id="btn-reset-stats" class="link-btn reset-btn">Zerar estatísticas</button>
+      </section>
+    </div>
+
+    <!-- DESAFIOS -->
+    <div class="painel hidden" id="painel-desafios" role="tabpanel">
+      <p class="subtitle">Dez músicas de um gênero numa década. No fim sai o placar, para mandar no grupo.</p>
+      <div id="desafio-grid" class="desafio-lista"></div>
+      <p class="secao-label hidden" id="desafios-label"></p>
+    </div>
+
+    <!-- LIVRE -->
+    <div class="painel hidden" id="painel-livre" role="tabpanel">
+      <p class="subtitle">Sem fim: escolha e vá tocando até cansar.</p>
+
+      <div class="modo">
+        <button type="button" id="btn-hits" class="modo-btn" aria-pressed="true">Só os hits</button>
+        <span class="modo-hint" id="hits-hint"></span>
+      </div>
+
+      <div id="genre-grid" class="genre-grid"></div>
+
+      <p class="secao-label">Por década</p>
+      <div id="decade-grid" class="genre-grid"></div>
+    </div>
   </section>
 
   <!-- JOGO -->
@@ -129,8 +146,8 @@
   Prévias de 30s via iTunes
 </footer>
 
-<script src="data/songs.js?v=9"></script>
-<script src="data/decoys.js?v=9"></script>
-<script src="app.js?v=9"></script>
+<script src="data/songs.js?v=10"></script>
+<script src="data/decoys.js?v=10"></script>
+<script src="app.js?v=10"></script>
 </body>
 </html>

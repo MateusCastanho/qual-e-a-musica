@@ -1081,6 +1081,28 @@ document.addEventListener("DOMContentLoaded", () => {
   renderStatsPanel();
   updateStatsUI();
 
+  document.querySelectorAll(".aba").forEach((aba) => {
+    aba.addEventListener("click", () => {
+      const alvo = aba.dataset.aba;
+      document.querySelectorAll(".aba").forEach((x) => {
+        const ativa = x === aba;
+        x.classList.toggle("ativa", ativa);
+        x.setAttribute("aria-selected", String(ativa));
+      });
+      document.querySelectorAll(".painel").forEach((pn) => {
+        pn.classList.toggle("hidden", pn.id !== "painel-" + alvo);
+      });
+      localStorage.setItem("qem_aba", alvo);
+    });
+  });
+
+  // volta na aba em que a pessoa estava
+  const abaSalva = localStorage.getItem("qem_aba");
+  if (abaSalva) {
+    const alvo = document.querySelector('.aba[data-aba="' + abaSalva + '"]');
+    if (alvo) alvo.click();
+  }
+
   $("#btn-hits").addEventListener("click", () => {
     state.hitsOnly = !state.hitsOnly;
     localStorage.setItem("qem_hits_only", state.hitsOnly ? "1" : "0");
