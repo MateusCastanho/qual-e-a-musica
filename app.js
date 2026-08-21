@@ -122,6 +122,48 @@ function normalize(str) {
     .trim();
 }
 
+// Decompõe um crédito em duas camadas. normalize() não serve aqui: ela corta
+// tudo depois de "ft."/"part.", então quem participa desaparecia — e acertar
+// a Anitta em "Major Lazer ft. Anitta" não contava como mesmo artista.
+//
+//   fortes — cada ato completo do crédito ("zé neto e cristiano")
+//   fracos — cada nome solto dentro do ato ("zé neto", "cristiano")
+function artistUnits(artist) {
+  const limpo = (artist || "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .replace(/\(.*?\)/g, " ");
+
+  const atos = limpo
+    .split(/\b(?:feat|ft|part|com)\b\.?/g)
+    .map((a) =>
+      a.replace(/[&,]/g, " e ").replace(/[^a-z0-9 ]/g, " ").replace(/\s+/g, " ").trim()
+    )
+    .filter(Boolean);
+
+  const fortes = new Set(atos);
+  const fracos = new Set();
+  atos.forEach((a) =>
+    a.split(/\s+e\s+/).forEach((n) => {
+      const nome = n.trim();
+      if (nome.length >= 2) fracos.add(nome);
+    })
+  );
+  return { fortes, fracos };
+}
+
+// Os dois créditos têm algum artista em comum? O nome compartilhado precisa
+// ser um ato COMPLETO em pelo menos um dos lados — senão "Guilherme &
+// Santiago" casaria com "Hugo & Guilherme", que são Guilhermes diferentes.
+function shareArtist(a, b) {
+  const A = artistUnits(a);
+  const B = artistUnits(b);
+  for (const x of A.fortes) if (B.fortes.has(x) || B.fracos.has(x)) return true;
+  for (const y of B.fortes) if (A.fracos.has(y)) return true;
+  return false;
+}
+
 // Distância de edição limitada: devolve 99 se claramente maior que 2.
 function editDistance(a, b) {
   if (Math.abs(a.length - b.length) > 2) return 99;
@@ -632,7 +674,7 @@ function handleGuess(guessRaw) {
   const guessedSong = findSongByGuess(guessRaw);
   const isCorrect = !!guessedSong && guessedSong.id === state.currentSong.id;
   const sameArtist =
-    !isCorrect && !!guessedSong && normalize(guessedSong.artist) === normalize(state.currentSong.artist);
+    !isCorrect && !!guessedSong && shareArtist(guessedSong.artist, state.currentSong.artist);
 
   const entryText = guessedSong ? `${guessedSong.title} - ${guessedSong.artist}` : guessRaw.trim();
 
