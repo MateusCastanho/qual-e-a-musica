@@ -61,13 +61,6 @@ body {
     radial-gradient(ellipse 70% 50% at 50% 0%, rgba(255, 90, 44, 0.1), transparent 70%);
 }
 
-#player-slot {
-  position: absolute;
-  width: 1px; height: 1px;
-  overflow: hidden; opacity: 0;
-  pointer-events: none;
-}
-
 ::selection { background: var(--laranja); color: var(--ink); }
 
 :focus-visible {
@@ -676,14 +669,6 @@ main {
   line-height: 1.15;
   letter-spacing: -0.02em;
   margin: 0 0 20px;
-}
-
-.reveal-card iframe {
-  width: 100%;
-  aspect-ratio: 16 / 9;
-  border-radius: var(--r);
-  border: none;
-  margin-top: 18px;
 }
 
 footer {
