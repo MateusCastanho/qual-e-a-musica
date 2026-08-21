@@ -20,6 +20,87 @@ const GENRE_LABELS = {
 };
 
 // Cada gênero tem uma cor própria, que marca o card no lugar de um emoji.
+const DAILY_ID = "diaria";
+// Data de referência do jogo. O número do dia sai daqui, então mudá-la
+// remexeria todas as músicas diárias já jogadas.
+const DAILY_EPOCH = Date.UTC(2026, 0, 1);
+
+// Dia corrente no fuso de Brasília: sem isso, quem joga à noite viraria o dia
+// antes da meia-noite local (ou depois), e a "mesma música do dia" deixaria
+// de ser a mesma para todo mundo.
+function diaDeHoje() {
+  const agora = new Date();
+  const brasilia = new Date(agora.getTime() - 3 * 3600 * 1000);
+  const meiaNoite = Date.UTC(brasilia.getUTCFullYear(), brasilia.getUTCMonth(), brasilia.getUTCDate());
+  return Math.floor((meiaNoite - DAILY_EPOCH) / 86400000);
+}
+
+// Embaralhador determinístico: a mesma semente devolve sempre o mesmo número.
+function hashDia(n) {
+  let h = (n + 1) * 2654435761 % 4294967296;
+  h ^= h >>> 13; h = (h * 1274126177) % 4294967296; h ^= h >>> 16;
+  return h >>> 0;
+}
+
+// A música do dia sai dos hits: todo mundo pega a mesma, e ela precisa ser
+// reconhecível — não faz sentido a do dia ser faixa de álbum obscura.
+function musicaDoDia(dia) {
+  const pool = SONGS.filter((s) => s.hit);
+  const lista = (pool.length ? pool : SONGS).slice().sort((a, b) => (a.id < b.id ? -1 : 1));
+  return lista[hashDia(dia) % lista.length];
+}
+
+// Décadas: recorte por ano de lançamento, atravessando os gêneros.
+const DECADES = {
+  "dec-80": { label: "Anos 80", min: 1970, max: 1989 },
+  "dec-90": { label: "Anos 90", min: 1990, max: 1999 },
+  "dec-00": { label: "Anos 2000", min: 2000, max: 2009 },
+  "dec-10": { label: "Anos 2010", min: 2010, max: 2019 },
+  "dec-20": { label: "Anos 2020", min: 2020, max: 2099 },
+};
+
+// Abaixo disso não vale filtrar por hit: a categoria ficaria pequena demais
+// e as mesmas músicas se repetiriam toda hora.
+const MIN_POR_CATEGORIA = 12;
+
+// Desafio: rodada fechada de N músicas de um gênero numa década, com placar
+// no fim para comparar com os amigos.
+const DESAFIO_TAMANHO = 10;
+
+function desafioId(genero, dec) { return "d:" + genero + ":" + dec; }
+
+function partesDesafio(id) {
+  if (!id || id.slice(0, 2) !== "d:") return null;
+  const [, genero, dec] = id.split(":");
+  return { genero, dec };
+}
+
+function rotuloDesafio(id) {
+  const p = partesDesafio(id);
+  if (!p) return "";
+  return GENRE_LABELS[p.genero] + " · " + DECADES[p.dec].label;
+}
+
+// Só entram combinações com música suficiente para uma rodada inteira.
+function desafiosDisponiveis() {
+  const out = [];
+  Object.keys(GENRE_LABELS).forEach((g) => {
+    if (g === TOP_GENRE_ID) return;
+    Object.keys(DECADES).forEach((dec) => {
+      const n = musicasDoDesafio(g, dec).length;
+      if (n >= DESAFIO_TAMANHO) out.push({ id: desafioId(g, dec), genero: g, dec, n });
+    });
+  });
+  return out;
+}
+
+function musicasDoDesafio(genero, dec) {
+  const d = DECADES[dec];
+  const base = SONGS.filter((s) => s.genre === genero && s.y >= d.min && s.y <= d.max);
+  const hits = base.filter((s) => s.hit);
+  return hits.length >= DESAFIO_TAMANHO ? hits : base;
+}
+
 const GENRE_ACCENT = {
   "top2000": "#ff5a2c",
   "sertanejo": "#e8b33c",
@@ -32,6 +113,11 @@ const GENRE_ACCENT = {
   "pop": "#a374d9",
   "rap": "#7c8fa8",
   "gospel": "#d9c05a",
+  "dec-80": "#d96f9b",
+  "dec-90": "#5f9ee0",
+  "dec-00": "#6ec2a0",
+  "dec-10": "#d98f4a",
+  "dec-20": "#b07de0",
 };
 
 const ATTEMPT_DURATIONS = [0.5, 2, 5, 10, 15]; // seconds
@@ -40,15 +126,24 @@ const ATTEMPT_DURATIONS = [0.5, 2, 5, 10, 15]; // seconds
 // vale quase 7x acertar com 15s — é o que a patente premia.
 const STAGE_POINTS = [100, 60, 40, 25, 15];
 
-// Patentes por pontuação acumulada, da menor para a maior.
+// Patentes por pontuação acumulada. A escala é longa de propósito: com mais
+// de 3 mil músicas, a antiga (topo em 6 mil pts) se esgotava numa noite.
 const RANKS = [
   { min: 0, name: "Ouvinte de Rádio" },
-  { min: 300, name: "Fã de Carteirinha" },
-  { min: 800, name: "DJ de Churrasco" },
-  { min: 1800, name: "Cabeça de Fone" },
-  { min: 3500, name: "Ouvido Absoluto" },
-  { min: 6000, name: "Enciclopédia Musical" },
+  { min: 500, name: "Fã de Carteirinha" },
+  { min: 1500, name: "DJ de Churrasco" },
+  { min: 3500, name: "Cabeça de Fone" },
+  { min: 7000, name: "Colecionador de Vinil" },
+  { min: 12000, name: "Ouvido Absoluto" },
+  { min: 20000, name: "Jurado de Calourada" },
+  { min: 32000, name: "Maestro de Boteco" },
+  { min: 50000, name: "Enciclopédia Musical" },
+  { min: 75000, name: "Patrimônio Imaterial" },
 ];
+
+// Jogar com o catálogo inteiro é bem mais difícil que só com os hits, então
+// vale mais ponto — senão não haveria motivo para desligar o filtro.
+const BONUS_CATALOGO = 1.6;
 
 function emptyStats() {
   return {
@@ -92,6 +187,7 @@ const state = {
   queue: [],
   currentSong: null,
   attemptIndex: 0, // 0-based, index into ATTEMPT_DURATIONS
+  desafio: null,    // rodada fechada em andamento, quando houver
   audio: null,
   ready: false,     // a prévia já carregou o suficiente para tocar?
   playing: false,
@@ -102,6 +198,9 @@ const state = {
   streak: Number(localStorage.getItem("qem_streak") || 0),
   bestStreak: Number(localStorage.getItem("qem_best_streak") || 0),
   stats: loadStats(),
+  // Padrão ligado: com a base cheia, a maioria das faixas é de álbum e o
+  // jogo fica injogável sem esse filtro.
+  hitsOnly: localStorage.getItem("qem_hits_only") !== "0",
 };
 
 // ---------- utils ----------
@@ -233,9 +332,24 @@ function updateStatsUI() {
 
 // ---------- genre screen ----------
 
-function songsByGenre(genreId) {
-  if (genreId === TOP_GENRE_ID) return SONGS.filter((s) => s.top);
-  return SONGS.filter((s) => s.genre === genreId);
+// Todas as músicas de uma categoria, sem olhar dificuldade.
+function todasDaCategoria(id) {
+  if (id === DAILY_ID) return [musicaDoDia(diaDeHoje())];
+  const p = partesDesafio(id);
+  if (p) return musicasDoDesafio(p.genero, p.dec);
+  if (id === TOP_GENRE_ID) return SONGS.filter((s) => s.top);
+  const d = DECADES[id];
+  if (d) return SONGS.filter((s) => s.y >= d.min && s.y <= d.max);
+  return SONGS.filter((s) => s.genre === id);
+}
+
+// O que entra no sorteio, já considerando o modo escolhido. O "Top 2000+" é
+// uma seleção de hits por definição, então o filtro não se aplica a ele.
+function songsByGenre(id) {
+  const base = todasDaCategoria(id);
+  if (!state.hitsOnly || id === TOP_GENRE_ID) return base;
+  const hits = base.filter((s) => s.hit);
+  return hits.length >= MIN_POR_CATEGORIA ? hits : base;
 }
 
 function renderStatsPanel() {
@@ -294,30 +408,174 @@ function renderStatsPanel() {
   });
 }
 
+function lerDiaria() {
+  try { return JSON.parse(localStorage.getItem("qem_diaria")) || null; } catch { return null; }
+}
+
+// Grava o andamento da diária a cada jogada, não só no fim. Sem isso,
+// atualizar a página no meio recomeçaria a rodada já sabendo a música.
+function salvarProgressoDiaria() {
+  if (state.genre !== DAILY_ID) return;
+  const etapa = Math.min(state.attemptIndex, ATTEMPT_DURATIONS.length - 1);
+  localStorage.setItem("qem_diaria", JSON.stringify({
+    dia: diaDeHoje(),
+    emAndamento: !state.finished,
+    attemptIndex: state.attemptIndex,
+    history: state.history,
+    ganhou: state.solved,
+    trecho: ATTEMPT_DURATIONS[etapa],
+    tentativa: etapa + 1,
+  }));
+}
+
+function renderDailyCard() {
+  const dia = diaDeHoje();
+  const feito = lerDiaria();
+  const deHoje = feito && feito.dia === dia;
+  const emAndamento = deHoje && feito.emAndamento;
+  const jaJogou = deHoje && !feito.emAndamento;
+  const box = $("#daily-card");
+
+  let status;
+  if (emAndamento) status = `Em andamento · ${feito.attemptIndex} de ${ATTEMPT_DURATIONS.length} tentativas`;
+  else if (!deHoje) status = "Ainda não jogada";
+  else if (feito.ganhou) status = `Você acertou com ${feito.trecho}s`;
+  else status = "Você não acertou hoje";
+
+  box.innerHTML =
+    `<div class="daily-info">` +
+      `<p class="stats-label">Música do dia · nº ${dia}</p>` +
+      `<p class="daily-status">${status}</p>` +
+    `</div>` +
+    `<div class="daily-acoes">` +
+      (jaJogou
+        ? `<button type="button" class="modo-btn" id="btn-share">Compartilhar</button>` +
+          `<span class="daily-next" id="daily-next"></span>`
+        : `<button type="button" class="play-btn daily-play" id="btn-daily">` +
+          (emAndamento ? "Continuar" : "Jogar a do dia") + `</button>`) +
+    `</div>`;
+
+  if (!jaJogou) {
+    $("#btn-daily").addEventListener("click", () => startGenre(DAILY_ID));
+  } else {
+    $("#btn-share").addEventListener("click", () => compartilharDiaria(dia, feito));
+    atualizarContagem();
+  }
+}
+
+// Quanto falta para a próxima música do dia (meia-noite de Brasília).
+function atualizarContagem() {
+  const el = $("#daily-next");
+  if (!el) return;
+  const agora = new Date();
+  const b = new Date(agora.getTime() - 3 * 3600 * 1000);
+  const proxima = Date.UTC(b.getUTCFullYear(), b.getUTCMonth(), b.getUTCDate() + 1);
+  const falta = proxima - (agora.getTime() - 3 * 3600 * 1000);
+  const h = Math.floor(falta / 3600000);
+  const m = Math.floor((falta % 3600000) / 60000);
+  el.textContent = `próxima em ${h}h${String(m).padStart(2, "0")}`;
+}
+
+function compartilharDiaria(dia, feito) {
+  const linha = feito.ganhou
+    ? `Acertei com ${feito.trecho}s (${feito.tentativa}ª tentativa)`
+    : "Não acertei essa";
+  const texto = `Qual é a Música nº ${dia}\n${linha}\n${location.origin}${location.pathname}`;
+  const btn = $("#btn-share");
+  navigator.clipboard.writeText(texto).then(
+    () => { btn.textContent = "Copiado!"; setTimeout(() => (btn.textContent = "Compartilhar"), 1800); },
+    () => { btn.textContent = "Não deu para copiar"; setTimeout(() => (btn.textContent = "Compartilhar"), 1800); }
+  );
+}
+
+function criarCard(id, rotulo) {
+  const count = songsByGenre(id).length;
+  const card = document.createElement("button");
+  card.className = id === TOP_GENRE_ID ? "genre-card genre-card-featured" : "genre-card";
+  card.disabled = count === 0;
+  card.style.setProperty("--chip", GENRE_ACCENT[id] || "var(--laranja)");
+  card.innerHTML =
+    `<span class="genre-name">${rotulo}</span>` +
+    `<span class="genre-count"><b>${count}</b>músicas</span>`;
+  card.addEventListener("click", () => startGenre(id));
+  return card;
+}
+
 function renderGenreGrid() {
   const grid = $("#genre-grid");
   grid.innerHTML = "";
-  Object.keys(GENRE_LABELS).forEach((genreId) => {
-    const count = songsByGenre(genreId).length;
-    const card = document.createElement("button");
-    card.className = genreId === TOP_GENRE_ID ? "genre-card genre-card-featured" : "genre-card";
-    card.disabled = count === 0;
-    card.style.setProperty("--chip", GENRE_ACCENT[genreId]);
-    card.innerHTML =
-      `<span class="genre-name">${GENRE_LABELS[genreId]}</span>` +
-      `<span class="genre-count"><b>${count}</b>músicas</span>`;
-    card.addEventListener("click", () => startGenre(genreId));
-    grid.appendChild(card);
+  Object.keys(GENRE_LABELS).forEach((id) => grid.appendChild(criarCard(id, GENRE_LABELS[id])));
+
+  const grade = $("#decade-grid");
+  grade.innerHTML = "";
+  Object.entries(DECADES).forEach(([id, d]) => grade.appendChild(criarCard(id, d.label)));
+
+  // Uma linha por gênero, com as décadas que têm música suficiente. Em cards
+  // separados isso viraria 44 blocos e uma rolagem sem fim no celular.
+  const gd = $("#desafio-grid");
+  gd.innerHTML = "";
+  const desafios = desafiosDisponiveis();
+  const porGenero = {};
+  desafios.forEach((d) => (porGenero[d.genero] = porGenero[d.genero] || []).push(d));
+
+  Object.keys(GENRE_LABELS).forEach((g) => {
+    const lista = porGenero[g];
+    if (!lista) return;
+    const linha = document.createElement("div");
+    linha.className = "desafio-linha";
+    linha.style.setProperty("--chip", GENRE_ACCENT[g] || "var(--laranja)");
+    linha.innerHTML = `<span class="desafio-genero">${GENRE_LABELS[g]}</span>`;
+    const chips = document.createElement("div");
+    chips.className = "desafio-chips";
+    lista.forEach((d) => {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = "desafio-chip";
+      b.textContent = DECADES[d.dec].label.replace("Anos ", "");
+      b.title = GENRE_LABELS[g] + " · " + DECADES[d.dec].label;
+      b.addEventListener("click", () => startGenre(d.id));
+      chips.appendChild(b);
+    });
+    linha.appendChild(chips);
+    gd.appendChild(linha);
   });
+  // sem ano nas músicas ainda não há combinação possível
+  $("#desafios-label").classList.toggle("hidden", desafios.length === 0);
+
+  const btn = $("#btn-hits");
+  btn.textContent = state.hitsOnly ? "Só os hits" : "Catálogo inteiro";
+  btn.classList.toggle("ligado", state.hitsOnly);
+  $("#hits-hint").textContent = state.hitsOnly
+    ? "Sorteando só as músicas mais conhecidas de cada categoria."
+    : "Sorteando tudo, inclusive faixa de álbum — bem mais difícil.";
 }
 
 function startGenre(genreId) {
   state.genre = genreId;
   state.queue = shuffle(songsByGenre(genreId));
+
+  // No desafio a rodada é fechada: N músicas e placar no fim.
+  state.desafio = partesDesafio(genreId)
+    ? { id: genreId, total: DESAFIO_TAMANHO, feitas: 0, acertos: 0, pontos: 0 }
+    : null;
+  if (state.desafio) state.queue = state.queue.slice(0, DESAFIO_TAMANHO);
+
   $("#screen-genres").classList.add("hidden");
   $("#screen-game").classList.remove("hidden");
   document.body.classList.add("in-game");
   nextSong();
+
+  // Diária interrompida: volta ao ponto em que parou. Atualizar a página no
+  // meio não devolve as tentativas já gastas.
+  if (genreId === DAILY_ID) {
+    const salvo = lerDiaria();
+    if (salvo && salvo.dia === diaDeHoje() && salvo.emAndamento && salvo.attemptIndex > 0) {
+      state.attemptIndex = salvo.attemptIndex;
+      state.history = salvo.history || [];
+      renderAttempts();
+      renderHistory();
+    }
+  }
 }
 
 // Autocomplete própria (não o <datalist> nativo): o datalist filtra por
@@ -445,6 +703,8 @@ function nextSong() {
   state.finished = false;
   state.history = [];
   pararAudio();
+  $("#reveal-sub").classList.add("hidden");
+  $("#btn-share-desafio").classList.add("hidden");
 
   // Remover o iframe da revelação de verdade — só esconder o card deixa o
   // vídeo do YouTube tocando em segundo plano.
@@ -666,6 +926,7 @@ function handleGuess(guessRaw) {
   renderAttempts();
   renderHistory();
   estenderTrecho();
+  salvarProgressoDiaria();
   $("#guess-input").value = "";
 }
 
@@ -684,6 +945,7 @@ function handleSkip() {
   renderAttempts();
   renderHistory();
   estenderTrecho();
+  salvarProgressoDiaria();
 }
 
 function persistStats() {
@@ -707,11 +969,25 @@ function recordRound(won) {
     // attemptIndex ainda aponta para a etapa em que o acerto aconteceu
     const stage = Math.min(state.attemptIndex, ATTEMPT_DURATIONS.length - 1);
     st.byStage[stage] += 1;
-    st.points += STAGE_POINTS[stage];
+    const semFiltro = !state.hitsOnly && state.genre !== TOP_GENRE_ID && state.genre !== DAILY_ID;
+    st.points += Math.round(STAGE_POINTS[stage] * (semFiltro ? BONUS_CATALOGO : 1));
     if (g) st.byGenre[g].wins += 1;
   }
 
   localStorage.setItem("qem_stats", JSON.stringify(st));
+
+  const etapa = Math.min(state.attemptIndex, ATTEMPT_DURATIONS.length - 1);
+
+  if (state.genre === DAILY_ID) salvarProgressoDiaria();
+
+  if (state.desafio) {
+    state.desafio.feitas += 1;
+    if (won) {
+      state.desafio.acertos += 1;
+      state.desafio.pontos += STAGE_POINTS[etapa];
+    }
+  }
+
   renderStatsPanel();
 }
 
@@ -727,7 +1003,52 @@ function finishRound(won) {
   const song = state.currentSong;
   $("#reveal-label").textContent = won ? "Você acertou" : "A música era";
   $("#reveal-text").textContent = `${song.title} — ${song.artist}`;
+
+  const d = state.desafio;
+  const btn = $("#btn-next-song");
+  if (d) {
+    btn.textContent = d.feitas >= d.total
+      ? "Ver resultado"
+      : `Próxima · ${d.feitas + 1} de ${d.total}`;
+  } else if (state.genre === DAILY_ID) {
+    btn.textContent = "Voltar";
+  } else {
+    btn.textContent = "Próxima música";
+  }
+
   $("#reveal-card").classList.remove("hidden");
+}
+
+function voltarParaMenu() {
+  pararAudio();
+  $("#screen-game").classList.add("hidden");
+  $("#screen-genres").classList.remove("hidden");
+  document.body.classList.remove("in-game");
+  state.desafio = null;
+  renderDailyCard();
+  renderGenreGrid();
+}
+
+function mostrarResultadoDesafio() {
+  const d = state.desafio;
+  pararAudio();
+  $("#reveal-label").textContent = "Desafio concluído";
+  $("#reveal-text").textContent = `${d.acertos} de ${d.total} · ${d.pontos} pts`;
+  $("#reveal-sub").textContent = rotuloDesafio(d.id);
+  $("#reveal-sub").classList.remove("hidden");
+  $("#btn-next-song").textContent = "Voltar";
+  $("#btn-share-desafio").classList.remove("hidden");
+  $("#btn-share-desafio").onclick = () => {
+    const texto = `Qual é a Música — ${rotuloDesafio(d.id)}\n` +
+      `${d.acertos}/${d.total} acertos · ${d.pontos} pts\n` +
+      `${location.origin}${location.pathname}`;
+    const b = $("#btn-share-desafio");
+    navigator.clipboard.writeText(texto).then(
+      () => { b.textContent = "Copiado!"; setTimeout(() => (b.textContent = "Compartilhar"), 1800); },
+      () => { b.textContent = "Não deu para copiar"; setTimeout(() => (b.textContent = "Compartilhar"), 1800); }
+    );
+  };
+  state.desafio = { ...d, encerrado: true };
 }
 
 // ---------- áudio ----------
@@ -755,9 +1076,17 @@ function criarAudio() {
 
 document.addEventListener("DOMContentLoaded", () => {
   criarAudio();
+  renderDailyCard();
   renderGenreGrid();
   renderStatsPanel();
   updateStatsUI();
+
+  $("#btn-hits").addEventListener("click", () => {
+    state.hitsOnly = !state.hitsOnly;
+    localStorage.setItem("qem_hits_only", state.hitsOnly ? "1" : "0");
+    $("#btn-hits").setAttribute("aria-pressed", String(state.hitsOnly));
+    renderGenreGrid(); // as contagens mudam junto
+  });
 
   $("#btn-reset-stats").addEventListener("click", () => {
     if (!confirm("Zerar todas as estatísticas, patente e recorde? Não dá para desfazer.")) return;
@@ -769,12 +1098,7 @@ document.addEventListener("DOMContentLoaded", () => {
     renderStatsPanel();
   });
 
-  $("#btn-change-genre").addEventListener("click", () => {
-    pararAudio();
-    $("#screen-game").classList.add("hidden");
-    $("#screen-genres").classList.remove("hidden");
-    document.body.classList.remove("in-game");
-  });
+  $("#btn-change-genre").addEventListener("click", voltarParaMenu);
 
   $("#btn-play-snippet").addEventListener("click", playSnippet);
 
@@ -807,5 +1131,12 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   $("#btn-skip").addEventListener("click", handleSkip);
-  $("#btn-next-song").addEventListener("click", nextSong);
+
+  $("#btn-next-song").addEventListener("click", () => {
+    const d = state.desafio;
+    if (d && d.encerrado) return voltarParaMenu();
+    if (d && d.feitas >= d.total) return mostrarResultadoDesafio();
+    if (state.genre === DAILY_ID) return voltarParaMenu();
+    nextSong();
+  });
 });

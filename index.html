@@ -11,7 +11,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=Archivo+Black&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <!-- O ?v= força o navegador a buscar a versão nova em vez da que está em
      cache. Ao mexer em style.css, app.js ou nos dados, incremente o número. -->
-<link rel="stylesheet" href="style.css?v=8">
+<link rel="stylesheet" href="style.css?v=9">
 </head>
 <body>
 
@@ -29,7 +29,20 @@
   <!-- ESCOLHA DE GÊNERO -->
   <section id="screen-genres" class="screen">
     <p class="subtitle">Meio segundo de música para começar. Cada erro libera mais tempo, até 15 segundos. Acerte com o menor trecho que conseguir.</p>
+    <div id="daily-card" class="daily-card"></div>
+
+    <div class="modo">
+      <button type="button" id="btn-hits" class="modo-btn" aria-pressed="true">Só os hits</button>
+      <span class="modo-hint" id="hits-hint"></span>
+    </div>
+
     <div id="genre-grid" class="genre-grid"></div>
+
+    <p class="secao-label">Por década</p>
+    <div id="decade-grid" class="genre-grid"></div>
+
+    <p class="secao-label" id="desafios-label">Desafios · 10 músicas, placar no fim</p>
+    <div id="desafio-grid" class="desafio-lista"></div>
 
     <section id="stats-panel" class="stats-panel hidden" aria-label="Suas estatísticas">
       <div class="rank-head">
@@ -103,7 +116,9 @@
     <div id="reveal-card" class="reveal-card hidden" aria-live="polite">
       <p class="reveal-label" id="reveal-label">A música era</p>
       <p id="reveal-text"></p>
+      <p id="reveal-sub" class="reveal-sub hidden"></p>
       <button id="btn-next-song" class="play-btn">Próxima música</button>
+      <button type="button" id="btn-share-desafio" class="modo-btn share-desafio hidden">Compartilhar</button>
     </div>
 
   </section>
@@ -114,8 +129,8 @@
   Prévias de 30s via iTunes
 </footer>
 
-<script src="data/songs.js?v=8"></script>
-<script src="data/decoys.js?v=8"></script>
-<script src="app.js?v=8"></script>
+<script src="data/songs.js?v=9"></script>
+<script src="data/decoys.js?v=9"></script>
+<script src="app.js?v=9"></script>
 </body>
 </html>
