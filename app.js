@@ -583,6 +583,38 @@ function playSnippet() {
   }, duration * 1000);
 }
 
+// Chamado quando a etapa avança (pular ou errar) COM o trecho ainda tocando:
+// em vez de cortar no tempo antigo, deixa a música seguir direto até o tempo
+// novo. Quem pula no meio do trecho de 5s ouve até os 10s sem clicar de novo.
+function estenderTrecho() {
+  if (!state.playing || state.finished) return;
+
+  const audio = state.audio;
+  const novoTotal = ATTEMPT_DURATIONS[Math.min(state.attemptIndex, ATTEMPT_DURATIONS.length - 1)];
+  const restante = novoTotal - audio.currentTime;
+  if (restante <= 0) return;
+
+  const fill = $("#tape-fill");
+  const maxDuration = ATTEMPT_DURATIONS[ATTEMPT_DURATIONS.length - 1];
+
+  // Congela a barra onde ela está para o novo trecho continuar dali, sem salto.
+  const larguraAtual = (audio.currentTime / maxDuration) * 100;
+  fill.style.transition = "none";
+  fill.style.width = larguraAtual + "%";
+  requestAnimationFrame(() => {
+    fill.style.transition = `width ${restante}s linear`;
+    fill.style.width = (novoTotal / maxDuration) * 100 + "%";
+  });
+
+  clearTimeout(state.playTimer);
+  state.playTimer = setTimeout(() => {
+    audio.pause();
+    audio.currentTime = 0;
+    state.playing = false;
+    $("#btn-play-snippet").disabled = state.finished;
+  }, restante * 1000);
+}
+
 function pararAudio() {
   clearTimeout(state.playTimer);
   if (state.audio) {
@@ -633,6 +665,7 @@ function handleGuess(guessRaw) {
 
   renderAttempts();
   renderHistory();
+  estenderTrecho();
   $("#guess-input").value = "";
 }
 
@@ -650,6 +683,7 @@ function handleSkip() {
   }
   renderAttempts();
   renderHistory();
+  estenderTrecho();
 }
 
 function persistStats() {
