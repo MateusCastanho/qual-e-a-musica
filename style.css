@@ -219,19 +219,18 @@ main {
   overflow: hidden;
 }
 
+/* Nome do gênero em cima e as décadas embaixo: com o rótulo inteiro
+   ("Anos 2000") as fichas não cabem na mesma linha num celular. */
 .desafio-linha {
   --chip: var(--laranja);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 14px;
-  flex-wrap: wrap;
-  padding: 12px 14px;
+  padding: 13px 15px;
   background: var(--ink-raise);
   border-left: 3px solid var(--chip);
 }
 
 .desafio-genero {
+  display: block;
+  margin-bottom: 9px;
   font-family: var(--display);
   font-size: 0.86rem;
   letter-spacing: -0.01em;

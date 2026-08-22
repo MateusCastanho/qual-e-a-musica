@@ -534,8 +534,9 @@ function renderGenreGrid() {
       const b = document.createElement("button");
       b.type = "button";
       b.className = "desafio-chip";
-      b.textContent = DECADES[d.dec].label.replace("Anos ", "");
-      b.title = GENRE_LABELS[g] + " · " + DECADES[d.dec].label;
+      // "80" sozinho não diz se é década, ano ou quantidade
+      b.textContent = DECADES[d.dec].label;
+      b.setAttribute("aria-label", GENRE_LABELS[g] + " nos " + DECADES[d.dec].label);
       b.addEventListener("click", () => startGenre(d.id));
       chips.appendChild(b);
     });
