@@ -11,17 +11,13 @@
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=Archivo+Black&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <!-- O ?v= força o navegador a buscar a versão nova em vez da que está em
      cache. Ao mexer em style.css, app.js ou nos dados, incremente o número. -->
-<link rel="stylesheet" href="style.css?v=10">
+<link rel="stylesheet" href="style.css?v=11">
 </head>
 <body>
 
 <header class="topbar">
   <h1>Qual é a <br>Música<span class="accent">?</span></h1>
   <div class="rule"></div>
-  <div class="stats" id="stats">
-    <span>Sequência <strong id="streak">0</strong></span>
-    <span>Recorde <strong id="best-streak">0</strong></span>
-  </div>
 </header>
 
 <main>
@@ -134,6 +130,7 @@
       <p class="reveal-label" id="reveal-label">A música era</p>
       <p id="reveal-text"></p>
       <p id="reveal-sub" class="reveal-sub hidden"></p>
+      <div id="desafio-stats" class="desafio-stats hidden"></div>
       <button id="btn-next-song" class="play-btn">Próxima música</button>
       <button type="button" id="btn-share-desafio" class="modo-btn share-desafio hidden">Compartilhar</button>
     </div>
@@ -142,12 +139,8 @@
 
 </main>
 
-<footer>
-  Prévias de 30s via iTunes
-</footer>
-
-<script src="data/songs.js?v=10"></script>
-<script src="data/decoys.js?v=10"></script>
-<script src="app.js?v=10"></script>
+<script src="data/songs.js?v=11"></script>
+<script src="data/decoys.js?v=11"></script>
+<script src="app.js?v=11"></script>
 </body>
 </html>

@@ -325,9 +325,12 @@ function findSongByGuess(guessRaw) {
   return found || null;
 }
 
+// A sequência saiu do cabeçalho; o recorde continua no painel de estatísticas.
 function updateStatsUI() {
-  $("#streak").textContent = state.streak;
-  $("#best-streak").textContent = state.bestStreak;
+  const s = $("#streak");
+  if (s) s.textContent = state.streak;
+  const b = $("#best-streak");
+  if (b) b.textContent = state.bestStreak;
 }
 
 // ---------- genre screen ----------
@@ -556,7 +559,16 @@ function startGenre(genreId) {
 
   // No desafio a rodada é fechada: N músicas e placar no fim.
   state.desafio = partesDesafio(genreId)
-    ? { id: genreId, total: DESAFIO_TAMANHO, feitas: 0, acertos: 0, pontos: 0 }
+    ? {
+        id: genreId,
+        total: DESAFIO_TAMANHO,
+        feitas: 0,
+        acertos: 0,
+        pontos: 0,
+        // quantos acertos em cada trecho, mais os que não saíram
+        byStage: ATTEMPT_DURATIONS.map(() => 0),
+        falhas: 0,
+      }
     : null;
   if (state.desafio) state.queue = state.queue.slice(0, DESAFIO_TAMANHO);
 
@@ -705,6 +717,7 @@ function nextSong() {
   pararAudio();
   $("#reveal-sub").classList.add("hidden");
   $("#btn-share-desafio").classList.add("hidden");
+  $("#desafio-stats").classList.add("hidden");
 
   // Remover o iframe da revelação de verdade — só esconder o card deixa o
   // vídeo do YouTube tocando em segundo plano.
@@ -981,10 +994,14 @@ function recordRound(won) {
   if (state.genre === DAILY_ID) salvarProgressoDiaria();
 
   if (state.desafio) {
-    state.desafio.feitas += 1;
+    const d = state.desafio;
+    d.feitas += 1;
     if (won) {
-      state.desafio.acertos += 1;
-      state.desafio.pontos += STAGE_POINTS[etapa];
+      d.acertos += 1;
+      d.pontos += STAGE_POINTS[etapa];
+      d.byStage[etapa] += 1;
+    } else {
+      d.falhas += 1;
     }
   }
 
@@ -1021,6 +1038,7 @@ function finishRound(won) {
 
 function voltarParaMenu() {
   pararAudio();
+  document.body.classList.remove("mostrando-resultado");
   $("#screen-game").classList.add("hidden");
   $("#screen-genres").classList.remove("hidden");
   document.body.classList.remove("in-game");
@@ -1029,18 +1047,83 @@ function voltarParaMenu() {
   renderGenreGrid();
 }
 
+function lerRecordes() {
+  try { return JSON.parse(localStorage.getItem("qem_desafios")) || {}; } catch { return {}; }
+}
+
+// Média de trechos gastos nos acertos: quanto menor, mais rápido reconheceu.
+function mediaTrechos(byStage) {
+  let soma = 0, n = 0;
+  byStage.forEach((q, i) => { soma += q * (i + 1); n += q; });
+  return n ? soma / n : 0;
+}
+
 function mostrarResultadoDesafio() {
   const d = state.desafio;
   pararAudio();
+  // O placar é a tela inteira: player, campo de chute e histórico da última
+  // música não têm mais função aqui e só competiriam com o resultado.
+  document.body.classList.add("mostrando-resultado");
+
+  const recordes = lerRecordes();
+  const anterior = recordes[d.id] || null;
+  const media = mediaTrechos(d.byStage);
+
   $("#reveal-label").textContent = "Desafio concluído";
-  $("#reveal-text").textContent = `${d.acertos} de ${d.total} · ${d.pontos} pts`;
+  $("#reveal-text").textContent = `${d.acertos} de ${d.total}`;
   $("#reveal-sub").textContent = rotuloDesafio(d.id);
   $("#reveal-sub").classList.remove("hidden");
+
+  const maior = Math.max(1, ...d.byStage, d.falhas);
+  let linhas = "";
+  ATTEMPT_DURATIONS.forEach((dur, i) => {
+    const n = d.byStage[i];
+    linhas +=
+      `<div class="dist-row">` +
+        `<span class="dist-label">${dur}s</span>` +
+        `<span class="dist-bar"><span class="dist-fill" style="width:${(n / maior) * 100}%"></span></span>` +
+        `<span class="dist-count">${n}</span>` +
+      `</div>`;
+  });
+  linhas +=
+    `<div class="dist-row">` +
+      `<span class="dist-label">—</span>` +
+      `<span class="dist-bar"><span class="dist-fill falhou" style="width:${(d.falhas / maior) * 100}%"></span></span>` +
+      `<span class="dist-count">${d.falhas}</span>` +
+    `</div>`;
+
+  // A comparação é com o próprio histórico: não há outras pessoas jogando
+  // este placar, então inventar média alheia seria mentira.
+  let comparacao;
+  if (!anterior) comparacao = "Primeira vez neste desafio.";
+  else if (d.acertos > anterior.acertos) comparacao = `Seu melhor até agora — o anterior era ${anterior.acertos} de ${anterior.total}.`;
+  else if (d.acertos === anterior.acertos) comparacao = `Empatou com seu melhor (${anterior.acertos} de ${anterior.total}).`;
+  else comparacao = `Seu melhor neste desafio é ${anterior.acertos} de ${anterior.total}.`;
+
+  $("#desafio-stats").innerHTML =
+    `<div class="stats-grid">` +
+      `<div class="stat-cell"><b>${d.pontos}</b><span>pontos</span></div>` +
+      `<div class="stat-cell"><b>${media ? media.toFixed(1) : "—"}</b><span>trechos por acerto</span></div>` +
+    `</div>` +
+    `<p class="stats-label">Acertos por trecho</p>` +
+    `<div class="dist">${linhas}</div>` +
+    `<p class="rank-next">${comparacao}</p>`;
+  $("#desafio-stats").classList.remove("hidden");
+
+  if (!anterior || d.acertos > anterior.acertos) {
+    recordes[d.id] = { acertos: d.acertos, total: d.total, pontos: d.pontos, dia: diaDeHoje() };
+    localStorage.setItem("qem_desafios", JSON.stringify(recordes));
+  }
+
   $("#btn-next-song").textContent = "Voltar";
   $("#btn-share-desafio").classList.remove("hidden");
   $("#btn-share-desafio").onclick = () => {
+    const barras = ATTEMPT_DURATIONS
+      .map((dur, i) => (d.byStage[i] ? `${dur}s×${d.byStage[i]}` : null))
+      .filter(Boolean).join("  ");
     const texto = `Qual é a Música — ${rotuloDesafio(d.id)}\n` +
-      `${d.acertos}/${d.total} acertos · ${d.pontos} pts\n` +
+      `${d.acertos}/${d.total} · ${d.pontos} pts\n` +
+      (barras ? barras + "\n" : "") +
       `${location.origin}${location.pathname}`;
     const b = $("#btn-share-desafio");
     navigator.clipboard.writeText(texto).then(

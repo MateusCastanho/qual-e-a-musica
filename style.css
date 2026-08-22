@@ -271,6 +271,37 @@ main {
 .share-desafio { margin-top: 10px; width: 100%; }
 .share-desafio.hidden { display: none; }
 
+/* No placar do desafio some tudo que era da rodada */
+body.mostrando-resultado .player-card,
+body.mostrando-resultado .guess-form,
+body.mostrando-resultado .history-list,
+body.mostrando-resultado #btn-change-genre {
+  display: none;
+}
+
+body.mostrando-resultado .reveal-card {
+  padding: 30px 24px 26px;
+}
+
+body.mostrando-resultado #reveal-text {
+  font-size: clamp(2rem, 9vw, 2.8rem);
+  margin-bottom: 6px;
+}
+
+/* resultado do desafio */
+.desafio-stats {
+  margin: 4px 0 20px;
+  text-align: left;
+}
+.desafio-stats.hidden { display: none; }
+.desafio-stats .stats-grid { margin: 0 0 18px; }
+.desafio-stats .rank-next { margin-top: 12px; }
+
+/* a barra das que não saíram fica apagada, não laranja */
+.dist-fill.falhou {
+  background: var(--line);
+}
+
 .secao-label.hidden { display: none; }
 
 /* seletor de dificuldade */
