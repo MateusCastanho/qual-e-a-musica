@@ -17,6 +17,7 @@ const GENRE_LABELS = {
   "pop": "Pop",
   "rap": "Rap",
   "gospel": "Gospel",
+  "internacional": "Internacional",
 };
 
 // Cada gênero tem uma cor própria, que marca o card no lugar de um emoji.
@@ -76,6 +77,8 @@ function partesDesafio(id) {
 }
 
 function rotuloDesafio(id) {
+  const ano = anoDoId(id);
+  if (ano) return "Top 10 de " + ano;
   const p = partesDesafio(id);
   if (!p) return "";
   return GENRE_LABELS[p.genero] + " · " + DECADES[p.dec].label;
@@ -94,11 +97,48 @@ function desafiosDisponiveis() {
   return out;
 }
 
+// Uma música de cada ano da década, pegando a mais forte disponível. Se a
+// década não tiver 10 anos com material, completa com as demais.
 function musicasDoDesafio(genero, dec) {
   const d = DECADES[dec];
   const base = SONGS.filter((s) => s.genre === genero && s.y >= d.min && s.y <= d.max);
-  const hits = base.filter((s) => s.hit);
-  return hits.length >= DESAFIO_TAMANHO ? hits : base;
+
+  const forca = (s) => (s.top ? 2 : s.hit ? 1 : 0);
+  const porAno = {};
+  base.forEach((s) => {
+    const atual = porAno[s.y];
+    if (!atual || forca(s) > forca(atual)) porAno[s.y] = s;
+  });
+
+  const umaPorAno = Object.keys(porAno).sort().map((a) => porAno[a]);
+  if (umaPorAno.length >= DESAFIO_TAMANHO) return umaPorAno;
+
+  const escolhidas = new Set(umaPorAno.map((s) => s.id));
+  const resto = base
+    .filter((s) => !escolhidas.has(s.id))
+    .sort((a, b) => forca(b) - forca(a));
+  return umaPorAno.concat(resto).slice(0, Math.max(DESAFIO_TAMANHO, umaPorAno.length));
+}
+
+// ---- desafio por ano: os maiores sucessos daquele ano ----
+// `ah` marca o ano em que a música foi hit (nem sempre o de lançamento) e
+// `ar` a posição dentro do ano; ambos vêm de pesquisa de paradas.
+function anoId(ano) { return "ano:" + ano; }
+
+function anoDoId(id) {
+  if (!id || id.slice(0, 4) !== "ano:") return null;
+  const n = +id.slice(4);
+  return Number.isFinite(n) ? n : null;
+}
+
+function musicasDoAno(ano) {
+  return SONGS.filter((s) => s.ah === ano).sort((a, b) => (a.ar || 99) - (b.ar || 99));
+}
+
+function anosDisponiveis() {
+  const c = {};
+  SONGS.forEach((s) => { if (s.ah) c[s.ah] = (c[s.ah] || 0) + 1; });
+  return Object.keys(c).map(Number).filter((a) => c[a] >= DESAFIO_TAMANHO).sort();
 }
 
 const GENRE_ACCENT = {
@@ -118,6 +158,7 @@ const GENRE_ACCENT = {
   "dec-00": "#6ec2a0",
   "dec-10": "#d98f4a",
   "dec-20": "#b07de0",
+  "internacional": "#4a9ed9",
 };
 
 const ATTEMPT_DURATIONS = [0.5, 2, 5, 10, 15]; // seconds
@@ -338,6 +379,8 @@ function updateStatsUI() {
 // Todas as músicas de uma categoria, sem olhar dificuldade.
 function todasDaCategoria(id) {
   if (id === DAILY_ID) return [musicaDoDia(diaDeHoje())];
+  const ano = anoDoId(id);
+  if (ano) return musicasDoAno(ano);
   const p = partesDesafio(id);
   if (p) return musicasDoDesafio(p.genero, p.dec);
   if (id === TOP_GENRE_ID) return SONGS.filter((s) => s.top);
@@ -546,6 +589,34 @@ function renderGenreGrid() {
   // sem ano nas músicas ainda não há combinação possível
   $("#desafios-label").classList.toggle("hidden", desafios.length === 0);
 
+  // Top 10 do ano: 47 botões soltos viram uma parede, então vão agrupados
+  // por década, uma linha cada.
+  const ga = $("#ano-grid");
+  ga.innerHTML = "";
+  const anos = anosDisponiveis();
+  Object.entries(DECADES).forEach(([, d]) => {
+    const daDecada = anos.filter((a) => a >= d.min && a <= d.max);
+    if (!daDecada.length) return;
+    const linha = document.createElement("div");
+    linha.className = "desafio-linha";
+    linha.style.setProperty("--chip", "var(--ouro)");
+    linha.innerHTML = `<span class="desafio-genero">${d.label}</span>`;
+    const chips = document.createElement("div");
+    chips.className = "desafio-chips";
+    daDecada.forEach((a) => {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = "desafio-chip";
+      b.textContent = a;
+      b.setAttribute("aria-label", "Top 10 de " + a);
+      b.addEventListener("click", () => startGenre(anoId(a)));
+      chips.appendChild(b);
+    });
+    linha.appendChild(chips);
+    ga.appendChild(linha);
+  });
+  $("#ano-label").classList.toggle("hidden", anos.length === 0);
+
   const btn = $("#btn-hits");
   btn.textContent = state.hitsOnly ? "Só os hits" : "Catálogo inteiro";
   btn.classList.toggle("ligado", state.hitsOnly);
@@ -559,7 +630,7 @@ function startGenre(genreId) {
   state.queue = shuffle(songsByGenre(genreId));
 
   // No desafio a rodada é fechada: N músicas e placar no fim.
-  state.desafio = partesDesafio(genreId)
+  state.desafio = (partesDesafio(genreId) || anoDoId(genreId))
     ? {
         id: genreId,
         total: DESAFIO_TAMANHO,
