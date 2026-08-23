@@ -301,6 +301,36 @@ function shareArtist(a, b) {
   return false;
 }
 
+// Palavras que aparecem em crédito mas ninguém é obrigado a digitar: quem
+// procura "MC Kevinho" tem que achar a música creditada só "Kevinho", e o
+// contrário também.
+const PALAVRAS_OPCIONAIS = new Set([
+  "mc", "dj", "mr", "banda", "grupo", "trio", "os", "as", "o", "a", "e", "de", "da", "do",
+]);
+
+function palavrasDe(str) {
+  return normalize(str).split(" ").filter(Boolean);
+}
+
+// Casa se cada palavra digitada for começo de alguma palavra do alvo. Assim
+// "olha explosao" acha "Olha a Explosão" (sem exigir o "a") e "revelacao
+// deixa" acha "Deixa Acontecer - Grupo Revelação" (ordem invertida).
+// Palavra opcional que não bate é ignorada, não reprova.
+function casaPalavras(consulta, alvo) {
+  const q = palavrasDe(consulta);
+  if (!q.length) return false;
+  const t = palavrasDe(alvo);
+  let casouAlguma = false;
+
+  for (const p of q) {
+    const bateu = t.some((w) => w.startsWith(p));
+    if (bateu) { casouAlguma = true; continue; }
+    if (PALAVRAS_OPCIONAIS.has(p)) continue; // "dj kevinho" ainda acha "Kevinho"
+    return false;
+  }
+  return casouAlguma;
+}
+
 // Distância de edição limitada: devolve 99 se claramente maior que 2.
 function editDistance(a, b) {
   if (Math.abs(a.length - b.length) > 2) return 99;
@@ -363,7 +393,18 @@ function findSongByGuess(guessRaw) {
     // com qualquer chute que contenha essas letras.
     return guessNorm.length >= 3 && t.length >= 4 && (t.includes(guessNorm) || guessNorm.includes(t));
   });
-  return found || null;
+  if (found) return found;
+
+  // Última tentativa, por palavras soltas ("olha explosao" para "Olha a
+  // Explosão"). Só vale se levar a UMA música: com duas ou mais candidatas
+  // não dá para saber qual era a intenção, e aceitar a primeira daria um
+  // acerto que a pessoa não fez.
+  if (palavrasDe(guessNorm).length >= 2) {
+    const porPalavras = pool.filter((s) => casaPalavras(guessNorm, `${s.title} ${s.artist}`));
+    const ids = new Set(porPalavras.map((s) => s.id || s.title + "|" + s.artist));
+    if (ids.size === 1) return porPalavras[0];
+  }
+  return null;
 }
 
 // A sequência saiu do cabeçalho; o recorde continua no painel de estatísticas.
@@ -700,15 +741,23 @@ function renderSuggestions(query) {
     return;
   }
 
+  // Pontua para o mais provável vir primeiro: quem começa com o que foi
+  // digitado ganha de quem só tem as palavras espalhadas.
+  const pontuar = (e) => {
+    let p = 0;
+    if (e.titleNorm === q) p += 100;
+    else if (e.titleNorm.startsWith(q)) p += 60;
+    else if (e.searchText.includes(q)) p += 30;
+    if (casaPalavras(q, e.searchText)) p += 20;
+    return p;
+  };
+
   const matches = getSuggestionPool()
-    .filter((e) => e.searchText.includes(q))
-    .sort((a, b) => {
-      // título começando com a busca aparece primeiro
-      const aStarts = a.titleNorm.startsWith(q) ? 0 : 1;
-      const bStarts = b.titleNorm.startsWith(q) ? 0 : 1;
-      return aStarts - bStarts;
-    })
-    .slice(0, 8);
+    .filter((e) => e.searchText.includes(q) || casaPalavras(q, e.searchText))
+    .map((e) => ({ e, p: pontuar(e) }))
+    .sort((a, b) => b.p - a.p)
+    .slice(0, 8)
+    .map((x) => x.e);
 
   currentSuggestionMatches = matches.map((e) => e.song);
 
