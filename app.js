@@ -434,7 +434,10 @@ function todasDaCategoria(id) {
 // uma seleção de hits por definição, então o filtro não se aplica a ele.
 function songsByGenre(id) {
   const base = todasDaCategoria(id);
-  if (!state.hitsOnly || id === TOP_GENRE_ID) return base;
+  // Desafio e diária têm seleção própria e fixa: o botão de dificuldade não
+  // pode mexer nelas, senão as "mesmas 10 músicas" mudariam por jogador.
+  const fixo = id === TOP_GENRE_ID || id === DAILY_ID || partesDesafio(id) || anoDoId(id);
+  if (!state.hitsOnly || fixo) return base;
   const hits = base.filter((s) => s.hit);
   return hits.length >= MIN_POR_CATEGORIA ? hits : base;
 }
@@ -575,6 +578,49 @@ function compartilharDiaria(dia, feito) {
   );
 }
 
+// Desafio já jogado não se repete: são sempre as mesmas 10 músicas, então
+// refazer seria só reescrever o placar sabendo as respostas. A ficha passa a
+// mostrar o resultado e abre o placar guardado em vez de começar de novo.
+function criarChipDesafio(id, rotulo, feitos, descricao) {
+  const b = document.createElement("button");
+  b.type = "button";
+  const feito = feitos[id];
+
+  if (feito) {
+    b.className = "desafio-chip feito";
+    b.textContent = rotulo + " · " + feito.acertos + "/" + feito.total;
+    b.setAttribute("aria-label", descricao + " — já jogado, " + feito.acertos + " de " + feito.total);
+    b.addEventListener("click", () => mostrarPlacarGuardado(id, feito));
+  } else {
+    b.className = "desafio-chip";
+    b.textContent = rotulo;
+    b.setAttribute("aria-label", descricao);
+    b.addEventListener("click", () => startGenre(id));
+  }
+  return b;
+}
+
+function mostrarPlacarGuardado(id, feito) {
+  $("#screen-genres").classList.add("hidden");
+  $("#screen-game").classList.remove("hidden");
+  document.body.classList.add("in-game", "mostrando-resultado");
+
+  $("#reveal-label").textContent = "Você já jogou";
+  $("#reveal-text").textContent = feito.acertos + " de " + feito.total;
+  $("#reveal-sub").textContent = rotuloDesafio(id);
+  $("#reveal-sub").classList.remove("hidden");
+  $("#desafio-stats").innerHTML =
+    `<div class="stats-grid">` +
+      `<div class="stat-cell"><b>${feito.pontos}</b><span>pontos</span></div>` +
+    `</div>` +
+    `<p class="rank-next">Cada desafio tem sempre as mesmas 10 músicas, então só vale jogar uma vez.</p>`;
+  $("#desafio-stats").classList.remove("hidden");
+  $("#btn-share-desafio").classList.add("hidden");
+  $("#btn-next-song").textContent = "Voltar";
+  $("#reveal-card").classList.remove("hidden");
+  state.desafio = { id, encerrado: true };
+}
+
 function criarCard(id, rotulo) {
   const count = songsByGenre(id).length;
   const card = document.createElement("button");
@@ -599,6 +645,7 @@ function renderGenreGrid() {
 
   // Uma linha por gênero, com as décadas que têm música suficiente. Em cards
   // separados isso viraria 44 blocos e uma rolagem sem fim no celular.
+  const feitos = lerRecordes();
   const gd = $("#desafio-grid");
   gd.innerHTML = "";
   const desafios = desafiosDisponiveis();
@@ -615,14 +662,8 @@ function renderGenreGrid() {
     const chips = document.createElement("div");
     chips.className = "desafio-chips";
     lista.forEach((d) => {
-      const b = document.createElement("button");
-      b.type = "button";
-      b.className = "desafio-chip";
-      // "80" sozinho não diz se é década, ano ou quantidade
-      b.textContent = DECADES[d.dec].label;
-      b.setAttribute("aria-label", GENRE_LABELS[g] + " nos " + DECADES[d.dec].label);
-      b.addEventListener("click", () => startGenre(d.id));
-      chips.appendChild(b);
+      chips.appendChild(criarChipDesafio(d.id, DECADES[d.dec].label, feitos,
+        GENRE_LABELS[g] + " nos " + DECADES[d.dec].label));
     });
     linha.appendChild(chips);
     gd.appendChild(linha);
@@ -645,13 +686,7 @@ function renderGenreGrid() {
     const chips = document.createElement("div");
     chips.className = "desafio-chips";
     daDecada.forEach((a) => {
-      const b = document.createElement("button");
-      b.type = "button";
-      b.className = "desafio-chip";
-      b.textContent = a;
-      b.setAttribute("aria-label", "Top 10 de " + a);
-      b.addEventListener("click", () => startGenre(anoId(a)));
-      chips.appendChild(b);
+      chips.appendChild(criarChipDesafio(anoId(a), String(a), feitos, "Top 10 de " + a));
     });
     linha.appendChild(chips);
     ga.appendChild(linha);
@@ -668,10 +703,16 @@ function renderGenreGrid() {
 
 function startGenre(genreId) {
   state.genre = genreId;
-  state.queue = shuffle(songsByGenre(genreId));
+  const ehDesafio = !!(partesDesafio(genreId) || anoDoId(genreId));
 
-  // No desafio a rodada é fechada: N músicas e placar no fim.
-  state.desafio = (partesDesafio(genreId) || anoDoId(genreId))
+  // Desafio não embaralha: são sempre as mesmas 10, na mesma ordem, senão
+  // dois amigos comparariam placares de rodadas diferentes. A fila é
+  // consumida do fim (pop), então vai invertida para tocar na ordem certa.
+  state.queue = ehDesafio
+    ? songsByGenre(genreId).slice(0, DESAFIO_TAMANHO).reverse()
+    : shuffle(songsByGenre(genreId));
+
+  state.desafio = ehDesafio
     ? {
         id: genreId,
         total: DESAFIO_TAMANHO,
@@ -1215,11 +1256,9 @@ function mostrarResultadoDesafio() {
 
   // A comparação é com o próprio histórico: não há outras pessoas jogando
   // este placar, então inventar média alheia seria mentira.
-  let comparacao;
-  if (!anterior) comparacao = "Primeira vez neste desafio.";
-  else if (d.acertos > anterior.acertos) comparacao = `Seu melhor até agora — o anterior era ${anterior.acertos} de ${anterior.total}.`;
-  else if (d.acertos === anterior.acertos) comparacao = `Empatou com seu melhor (${anterior.acertos} de ${anterior.total}).`;
-  else comparacao = `Seu melhor neste desafio é ${anterior.acertos} de ${anterior.total}.`;
+  const comparacao = anterior
+    ? `Você já tinha feito ${anterior.acertos} de ${anterior.total} aqui.`
+    : "Este desafio fica marcado como jogado — são sempre as mesmas 10 músicas.";
 
   $("#desafio-stats").innerHTML =
     `<div class="stats-grid">` +
@@ -1231,10 +1270,10 @@ function mostrarResultadoDesafio() {
     `<p class="rank-next">${comparacao}</p>`;
   $("#desafio-stats").classList.remove("hidden");
 
-  if (!anterior || d.acertos > anterior.acertos) {
-    recordes[d.id] = { acertos: d.acertos, total: d.total, pontos: d.pontos, dia: diaDeHoje() };
-    localStorage.setItem("qem_desafios", JSON.stringify(recordes));
-  }
+  // Grava sempre, não só quando melhora: é o registro de que o desafio foi
+  // jogado, e é ele que impede a repetição.
+  recordes[d.id] = { acertos: d.acertos, total: d.total, pontos: d.pontos, dia: diaDeHoje() };
+  localStorage.setItem("qem_desafios", JSON.stringify(recordes));
 
   $("#btn-next-song").textContent = "Voltar";
   $("#btn-share-desafio").classList.remove("hidden");

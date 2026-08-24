@@ -257,6 +257,18 @@ main {
   color: var(--ink);
 }
 
+/* já jogado: mostra o placar e não recomeça */
+.desafio-chip.feito {
+  border-color: var(--line-soft);
+  background: var(--ink);
+  color: var(--bone-faint);
+}
+.desafio-chip.feito:hover {
+  background: var(--ink);
+  border-color: var(--bone-faint);
+  color: var(--bone-dim);
+}
+
 .reveal-sub {
   margin: -12px 0 18px;
   font-family: var(--mono);
