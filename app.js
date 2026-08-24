@@ -51,6 +51,14 @@ function musicaDoDia(dia) {
   return lista[hashDia(dia) % lista.length];
 }
 
+// Ano que vale para classificar a música. Prefere `ah` — o ano em que ela foi
+// sucesso, vindo de pesquisa de paradas — porque `y` é a data mais antiga do
+// catálogo da Apple e erra bastante: "Batom de Cereja" (2021) aparecia como
+// 2012 e "Evidências" (1990) como 1986, cada uma na década errada.
+function anoDaMusica(s) {
+  return s.ah || s.y || 0;
+}
+
 // Décadas: recorte por ano de lançamento, atravessando os gêneros.
 const DECADES = {
   "dec-80": { label: "Anos 80", min: 1970, max: 1989 },
@@ -101,13 +109,17 @@ function desafiosDisponiveis() {
 // década não tiver 10 anos com material, completa com as demais.
 function musicasDoDesafio(genero, dec) {
   const d = DECADES[dec];
-  const base = SONGS.filter((s) => s.genre === genero && s.y >= d.min && s.y <= d.max);
+  const base = SONGS.filter((s) => {
+    const a = anoDaMusica(s);
+    return s.genre === genero && a >= d.min && a <= d.max;
+  });
 
   const forca = (s) => (s.top ? 2 : s.hit ? 1 : 0);
   const porAno = {};
   base.forEach((s) => {
-    const atual = porAno[s.y];
-    if (!atual || forca(s) > forca(atual)) porAno[s.y] = s;
+    const a = anoDaMusica(s);
+    const atual = porAno[a];
+    if (!atual || forca(s) > forca(atual)) porAno[a] = s;
   });
 
   const umaPorAno = Object.keys(porAno).sort().map((a) => porAno[a]);
@@ -233,6 +245,7 @@ const state = {
   ready: false,     // a prévia já carregou o suficiente para tocar?
   playing: false,
   playTimer: null,
+  previaTimer: null,
   solved: false,
   finished: false,
   history: [], // { type: "skip" | "wrong" | "correct", text, sameArtist }
@@ -362,9 +375,27 @@ function casaPalavras(consulta, alvo) {
 // Carlos, Banda Calypso/Banda Eva, Luiz Caldas/Luiz Gonzaga.
 const PALAVRAS_GENERICAS = new Set(["banda", "grupo", "trio", "mc", "dj", "part", "feat", "ft"]);
 
+// Gravação ao vivo emenda músicas: "Ainda Gosto de Você / Já Era". Quem ouve
+// o trecho reconhece UMA delas, então cada parte vale como o título.
+function partesDoTitulo(t) {
+  return String(t || "").split(/\s*\/\s*/).map((x) => normalize(x)).filter(Boolean);
+}
+
+function tituloCasa(a, b) {
+  const pa = partesDoTitulo(a);
+  const pb = partesDoTitulo(b);
+  return pa.some((x) => pb.includes(x));
+}
+
 function mesmaMusica(a, b) {
   if (!a || !b) return false;
-  if (normalize(a.title) !== normalize(b.title)) return false;
+
+  // Prova definitiva: o mesmo arquivo de áudio é a mesma gravação, ainda que
+  // os créditos não tenham nome nenhum em comum. "Seu Brilho Sumiu" está
+  // como Mari Fernandez e como Israel & Rodolffo, e é a mesma faixa.
+  if (a.previewUrl && b.previewUrl && a.previewUrl === b.previewUrl) return true;
+
+  if (!tituloCasa(a.title, b.title)) return false;
   if (shareArtist(a.artist, b.artist)) return true;
 
   // Mínimo de 2 letras, não 3: descartar "Zé" deixaria só o sobrenome, e
@@ -436,6 +467,12 @@ function findSongByGuess(guessRaw) {
   found = pool.find((s) => fuzzyEquals(guessNorm, normalize(s.title)));
   if (found) return found;
 
+  // uma parte de um título emendado ao vivo também identifica a música
+  found = pool.find((s) =>
+    /\s\/\s/.test(s.title) && partesDoTitulo(s.title).some((t) => fuzzyEquals(guessNorm, t))
+  );
+  if (found) return found;
+
   // Entre os títulos contidos no chute, vence o mais longo — o mais
   // específico. Pegar o primeiro fazia "P do Pecado - Grupo Menos é Mais"
   // casar com uma música chamada "Mais", que também está ali dentro.
@@ -482,7 +519,7 @@ function todasDaCategoria(id) {
   if (p) return musicasDoDesafio(p.genero, p.dec);
   if (id === TOP_GENRE_ID) return SONGS.filter((s) => s.top);
   const d = DECADES[id];
-  if (d) return SONGS.filter((s) => s.y >= d.min && s.y <= d.max);
+  if (d) return SONGS.filter((s) => { const a = anoDaMusica(s); return a >= d.min && a <= d.max; });
   return SONGS.filter((s) => s.genre === id);
 }
 
@@ -673,6 +710,7 @@ function mostrarPlacarGuardado(id, feito) {
   $("#desafio-stats").classList.remove("hidden");
   $("#btn-share-desafio").classList.add("hidden");
   $("#btn-ouvir").classList.add("hidden");
+  pararAcompanhamento();
   $("#btn-next-song").textContent = "Voltar";
   $("#reveal-card").classList.remove("hidden");
   state.desafio = { id, encerrado: true };
@@ -851,12 +889,16 @@ function renderSuggestions(query) {
     return p;
   };
 
-  const matches = getSuggestionPool()
+  const ordenados = getSuggestionPool()
     .filter((e) => e.searchText.includes(q) || casaPalavras(q, e.searchText))
     .map((e) => ({ e, p: pontuar(e) }))
     .sort((a, b) => b.p - a.p)
-    .slice(0, 8)
     .map((x) => x.e);
+
+  // Sem limite por artista: quem procura um nome quer ver o catálogo dele
+  // inteiro, participações incluídas. O teto alto existe só para uma busca de
+  // uma letra não tentar desenhar milhares de linhas a cada tecla.
+  const matches = ordenados.slice(0, 200);
 
   currentSuggestionMatches = matches.map((e) => e.song);
 
@@ -1120,6 +1162,7 @@ function ouvirMusica() {
     audio.pause();
     audio.currentTime = 0;
     btn.textContent = "Ouvir a música";
+    pararAcompanhamento();
     return;
   }
 
@@ -1129,6 +1172,28 @@ function ouvirMusica() {
   const p = audio.play();
   if (p && p.catch) p.catch(() => { btn.textContent = "Ouvir a música"; });
   btn.textContent = "Parar";
+  $("#ouvir-barra").classList.remove("hidden");
+  acompanharPrevia();
+}
+
+// Linha que anda junto com os 30s da prévia, para dar noção de quanto falta.
+function acompanharPrevia() {
+  clearInterval(state.previaTimer);
+  const audio = state.audio;
+  const fill = $("#ouvir-fill");
+  state.previaTimer = setInterval(() => {
+    if (!audio || audio.paused || !audio.duration) return;
+    fill.style.width = (audio.currentTime / audio.duration) * 100 + "%";
+  }, 100);
+}
+
+function pararAcompanhamento() {
+  clearInterval(state.previaTimer);
+  state.previaTimer = null;
+  const fill = $("#ouvir-fill");
+  if (fill) fill.style.width = "0%";
+  const barra = $("#ouvir-barra");
+  if (barra) barra.classList.add("hidden");
 }
 
 function pararAudio() {
@@ -1397,6 +1462,7 @@ function criarAudio() {
   audio.addEventListener("ended", () => {
     const b = $("#btn-ouvir");
     if (b) b.textContent = "Ouvir a música";
+    pararAcompanhamento();
   });
 
   audio.addEventListener("error", () => {

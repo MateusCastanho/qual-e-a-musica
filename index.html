@@ -11,7 +11,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=Archivo+Black&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <!-- O ?v= força o navegador a buscar a versão nova em vez da que está em
      cache. Ao mexer em style.css, app.js ou nos dados, incremente o número. -->
-<link rel="stylesheet" href="style.css?v=19">
+<link rel="stylesheet" href="style.css?v=20">
 </head>
 <body>
 
@@ -144,10 +144,13 @@
 
     <div id="reveal-card" class="reveal-card hidden" aria-live="polite">
       <p class="reveal-label" id="reveal-label">A música era</p>
-      <p id="reveal-text"></p>
+      <!-- o nome do desafio vem antes do placar: é a identidade do que foi
+           jogado, e é o que se compara com os amigos -->
       <p id="reveal-sub" class="reveal-sub hidden"></p>
+      <p id="reveal-text"></p>
       <div id="desafio-stats" class="desafio-stats hidden"></div>
       <button type="button" id="btn-ouvir" class="ouvir-btn hidden">Ouvir a música</button>
+      <div id="ouvir-barra" class="ouvir-barra hidden"><div id="ouvir-fill" class="ouvir-fill"></div></div>
       <button id="btn-next-song" class="play-btn">Próxima música</button>
       <button type="button" id="btn-share-desafio" class="modo-btn share-desafio hidden">Compartilhar</button>
     </div>
@@ -156,8 +159,8 @@
 
 </main>
 
-<script src="data/songs.js?v=19"></script>
-<script src="data/decoys.js?v=19"></script>
-<script src="app.js?v=19"></script>
+<script src="data/songs.js?v=20"></script>
+<script src="data/decoys.js?v=20"></script>
+<script src="app.js?v=20"></script>
 </body>
 </html>

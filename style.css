@@ -324,15 +324,34 @@ main {
   color: var(--bone-dim);
 }
 
+/* Nome do desafio: é a identidade do que foi jogado e o que se compara com
+   os amigos, então vem antes do placar e com peso de título. */
 .reveal-sub {
-  margin: -12px 0 18px;
-  font-family: var(--mono);
-  font-size: 0.72rem;
-  letter-spacing: 0.1em;
+  margin: 0 0 4px;
+  font-family: var(--display);
+  font-size: clamp(1.1rem, 4.5vw, 1.45rem);
+  line-height: 1.1;
+  letter-spacing: -0.02em;
   text-transform: uppercase;
-  color: var(--bone-faint);
+  color: var(--ouro);
 }
 .reveal-sub.hidden { display: none; }
+
+/* linha do tempo dos 30s da prévia */
+.ouvir-barra {
+  height: 4px;
+  margin: -4px 0 12px;
+  background: var(--ink);
+  border-radius: 999px;
+  overflow: hidden;
+}
+.ouvir-barra.hidden { display: none; }
+
+.ouvir-fill {
+  height: 100%;
+  width: 0%;
+  background: var(--bone-dim);
+}
 
 .share-desafio { margin-top: 10px; width: 100%; }
 .share-desafio.hidden { display: none; }
@@ -850,7 +869,7 @@ body.mostrando-resultado #reveal-text {
   background: var(--ink-high);
   border: 1px solid var(--line);
   border-radius: var(--r);
-  max-height: 290px;
+  max-height: 340px;
   overflow-y: auto;
   overscroll-behavior: contain;
   box-shadow: 0 16px 34px rgba(0, 0, 0, 0.55);
@@ -984,7 +1003,7 @@ footer {
   .suggestions-box {
     top: auto;
     bottom: calc(100% + 5px);
-    max-height: 240px;
+    max-height: 280px;
   }
 }
 
