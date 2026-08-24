@@ -11,7 +11,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=Archivo+Black&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <!-- O ?v= força o navegador a buscar a versão nova em vez da que está em
      cache. Ao mexer em style.css, app.js ou nos dados, incremente o número. -->
-<link rel="stylesheet" href="style.css?v=17">
+<link rel="stylesheet" href="style.css?v=18">
 </head>
 <body>
 
@@ -33,6 +33,18 @@
     <!-- HOJE -->
     <div class="painel" id="painel-hoje" role="tabpanel">
       <div id="daily-card" class="daily-card"></div>
+
+      <section class="como-funciona">
+        <p class="stats-label">Como funciona</p>
+        <p>Você ouve <strong>meio segundo</strong> de uma música e tenta acertar qual é.
+        Errou ou pulou? O trecho aumenta — 2s, 5s, 10s, 15s. Quanto menos tempo
+        precisar, mais pontos.</p>
+        <ul class="modos">
+          <li><strong>Hoje</strong> — uma música por dia, a mesma para todo mundo.</li>
+          <li><strong>Desafios</strong> — 10 músicas de um ano ou de um gênero, com placar no fim para mandar no grupo.</li>
+          <li><strong>Livre</strong> — escolha um gênero e vá tocando sem parar.</li>
+        </ul>
+      </section>
 
       <section id="stats-panel" class="stats-panel hidden" aria-label="Suas estatísticas">
       <div class="rank-head">
@@ -135,6 +147,7 @@
       <p id="reveal-text"></p>
       <p id="reveal-sub" class="reveal-sub hidden"></p>
       <div id="desafio-stats" class="desafio-stats hidden"></div>
+      <button type="button" id="btn-ouvir" class="ouvir-btn hidden">Ouvir a música</button>
       <button id="btn-next-song" class="play-btn">Próxima música</button>
       <button type="button" id="btn-share-desafio" class="modo-btn share-desafio hidden">Compartilhar</button>
     </div>
@@ -143,8 +156,8 @@
 
 </main>
 
-<script src="data/songs.js?v=17"></script>
-<script src="data/decoys.js?v=17"></script>
-<script src="app.js?v=17"></script>
+<script src="data/songs.js?v=18"></script>
+<script src="data/decoys.js?v=18"></script>
+<script src="app.js?v=18"></script>
 </body>
 </html>

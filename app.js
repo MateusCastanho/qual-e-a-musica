@@ -616,6 +616,7 @@ function mostrarPlacarGuardado(id, feito) {
     `<p class="rank-next">Cada desafio tem sempre as mesmas 10 músicas, então só vale jogar uma vez.</p>`;
   $("#desafio-stats").classList.remove("hidden");
   $("#btn-share-desafio").classList.add("hidden");
+  $("#btn-ouvir").classList.add("hidden");
   $("#btn-next-song").textContent = "Voltar";
   $("#reveal-card").classList.remove("hidden");
   state.desafio = { id, encerrado: true };
@@ -880,6 +881,7 @@ function nextSong() {
   $("#reveal-sub").classList.add("hidden");
   $("#btn-share-desafio").classList.add("hidden");
   $("#desafio-stats").classList.add("hidden");
+  $("#btn-ouvir").classList.add("hidden");
 
   // Remover o iframe da revelação de verdade — só esconder o card deixa o
   // vídeo do YouTube tocando em segundo plano.
@@ -1050,6 +1052,28 @@ function estenderTrecho() {
   }, restante * 1000);
 }
 
+// Depois de revelar, deixa ouvir os 30s da prévia. A pessoa passou a rodada
+// tentando reconhecer o trecho; ouvir a música é o fecho natural.
+function ouvirMusica() {
+  const audio = state.audio;
+  const btn = $("#btn-ouvir");
+  if (!audio) return;
+
+  if (!audio.paused) {
+    audio.pause();
+    audio.currentTime = 0;
+    btn.textContent = "Ouvir a música";
+    return;
+  }
+
+  clearTimeout(state.playTimer); // senão o corte do trecho interromperia
+  audio.currentTime = 0;
+  audio.volume = 1;
+  const p = audio.play();
+  if (p && p.catch) p.catch(() => { btn.textContent = "Ouvir a música"; });
+  btn.textContent = "Parar";
+}
+
 function pararAudio() {
   clearTimeout(state.playTimer);
   if (state.audio) {
@@ -1195,6 +1219,8 @@ function finishRound(won) {
     btn.textContent = "Próxima música";
   }
 
+  $("#btn-ouvir").textContent = "Ouvir a música";
+  $("#btn-ouvir").classList.remove("hidden");
   $("#reveal-card").classList.remove("hidden");
 }
 
@@ -1276,6 +1302,7 @@ function mostrarResultadoDesafio() {
   localStorage.setItem("qem_desafios", JSON.stringify(recordes));
 
   $("#btn-next-song").textContent = "Voltar";
+  $("#btn-ouvir").classList.add("hidden");
   $("#btn-share-desafio").classList.remove("hidden");
   $("#btn-share-desafio").onclick = () => {
     const barras = ATTEMPT_DURATIONS
@@ -1305,6 +1332,12 @@ function criarAudio() {
   // para um arquivo de 30s, então os dois liberam o botão.
   audio.addEventListener("canplaythrough", marcarPronto);
   audio.addEventListener("canplay", marcarPronto);
+
+  // a prévia terminou sozinha: devolve o rótulo do botão
+  audio.addEventListener("ended", () => {
+    const b = $("#btn-ouvir");
+    if (b) b.textContent = "Ouvir a música";
+  });
 
   audio.addEventListener("error", () => {
     // Prévia fora do ar: não trava a partida, pula para a próxima música.
@@ -1395,6 +1428,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 
+  $("#btn-ouvir").addEventListener("click", ouvirMusica);
   $("#btn-skip").addEventListener("click", handleSkip);
 
   $("#btn-next-song").addEventListener("click", () => {

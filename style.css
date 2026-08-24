@@ -208,6 +208,61 @@ main {
   color: var(--bone-faint);
 }
 
+/* explicação do jogo, na aba de entrada */
+.como-funciona {
+  margin-top: 22px;
+  padding: 18px 20px;
+  background: var(--ink-raise);
+  border: 1px solid var(--line-soft);
+  border-radius: var(--r);
+}
+
+.como-funciona p {
+  margin: 0;
+  color: var(--bone-dim);
+  font-size: 0.92rem;
+  line-height: 1.55;
+}
+.como-funciona p strong { color: var(--bone); font-weight: 600; }
+
+.modos {
+  margin: 14px 0 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.modos li {
+  font-size: 0.88rem;
+  line-height: 1.45;
+  color: var(--bone-faint);
+  padding-left: 12px;
+  border-left: 2px solid var(--line);
+}
+.modos li strong { color: var(--laranja); font-weight: 600; }
+
+/* botão de ouvir a música na revelação */
+.ouvir-btn {
+  display: block;
+  width: 100%;
+  margin-bottom: 10px;
+  font-family: var(--mono);
+  font-size: 0.74rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  padding: 13px 18px;
+  border-radius: var(--r);
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--bone-dim);
+  cursor: pointer;
+  transition: color 0.14s ease, border-color 0.14s ease;
+}
+.ouvir-btn:hover { color: var(--bone); border-color: var(--bone-dim); }
+.ouvir-btn.hidden { display: none; }
+
 /* desafios: uma linha por gênero, décadas como fichas */
 .desafio-lista {
   display: flex;
