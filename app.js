@@ -86,7 +86,7 @@ function partesDesafio(id) {
 
 function rotuloDesafio(id) {
   const ano = anoDoId(id);
-  if (ano) return "Top 10 de " + ano;
+  if (ano) return "Top " + tamanhoDoDesafio(id) + " de " + ano;
   const p = partesDesafio(id);
   if (!p) return "";
   return GENRE_LABELS[p.genero] + " · " + DECADES[p.dec].label;
@@ -99,7 +99,7 @@ function desafiosDisponiveis() {
     if (g === TOP_GENRE_ID) return;
     Object.keys(DECADES).forEach((dec) => {
       const n = musicasDoDesafio(g, dec).length;
-      if (n >= DESAFIO_TAMANHO) out.push({ id: desafioId(g, dec), genero: g, dec, n });
+      if (n >= DESAFIO_MINIMO) out.push({ id: desafioId(g, dec), genero: g, dec, n });
     });
   });
   return out;
@@ -147,10 +147,20 @@ function musicasDoAno(ano) {
   return SONGS.filter((s) => s.ah === ano).sort((a, b) => (a.ar || 99) - (b.ar || 99));
 }
 
+// Mínimo para um ano virar desafio. Não são sempre 10: alguns anos recentes
+// têm sucessos que o catálogo brasileiro da Apple não traz — só cover ou
+// karaokê, que não servem. Melhor um desafio de 9 do que nenhum.
+const DESAFIO_MINIMO = 8;
+
 function anosDisponiveis() {
   const c = {};
   SONGS.forEach((s) => { if (s.ah) c[s.ah] = (c[s.ah] || 0) + 1; });
-  return Object.keys(c).map(Number).filter((a) => c[a] >= DESAFIO_TAMANHO).sort();
+  return Object.keys(c).map(Number).filter((a) => c[a] >= DESAFIO_MINIMO).sort();
+}
+
+// Quantas músicas este desafio tem de verdade.
+function tamanhoDoDesafio(id) {
+  return Math.min(DESAFIO_TAMANHO, todasDaCategoria(id).length);
 }
 
 const GENRE_ACCENT = {
@@ -174,6 +184,13 @@ const GENRE_ACCENT = {
 };
 
 const ATTEMPT_DURATIONS = [0.5, 2, 5, 10, 15]; // seconds
+
+// De onde o trecho começa dentro da prévia de 30s. Medindo a energia do áudio
+// segundo a segundo em 15 faixas, o começo é mais fraco que o miolo (0,60
+// contra 0,74 aos 6s): algumas prévias abrem em introdução ou em transição,
+// e meio segundo disso não diz nada. Pular 6s cai num ponto mais cheio e
+// ainda deixa espaço para os 15s do maior trecho (6 + 15 = 21 de 30).
+const INICIO_DO_TRECHO = 6;
 
 // Pontos por acerto, conforme o trecho que bastou. Acertar com meio segundo
 // vale quase 7x acertar com 15s — é o que a patente premia.
@@ -804,13 +821,13 @@ function startGenre(genreId) {
   // dois amigos comparariam placares de rodadas diferentes. A fila é
   // consumida do fim (pop), então vai invertida para tocar na ordem certa.
   state.queue = ehDesafio
-    ? songsByGenre(genreId).slice(0, DESAFIO_TAMANHO).reverse()
+    ? songsByGenre(genreId).slice(0, tamanhoDoDesafio(genreId)).reverse()
     : shuffle(songsByGenre(genreId));
 
   state.desafio = ehDesafio
     ? {
         id: genreId,
-        total: DESAFIO_TAMANHO,
+        total: tamanhoDoDesafio(genreId),
         feitas: 0,
         acertos: 0,
         pontos: 0,
@@ -1087,7 +1104,7 @@ function playSnippet() {
   state.playing = true;
   btn.disabled = true;
 
-  audio.currentTime = 0;
+  audio.currentTime = INICIO_DO_TRECHO;
   audio.volume = 1;
 
   // play() devolve promessa: no celular ela é rejeitada se o navegador não
@@ -1113,7 +1130,7 @@ function playSnippet() {
   clearTimeout(state.playTimer);
   state.playTimer = setTimeout(() => {
     audio.pause();
-    audio.currentTime = 0;
+    audio.currentTime = INICIO_DO_TRECHO;
     state.playing = false;
     btn.disabled = state.finished;
   }, duration * 1000);
@@ -1127,14 +1144,14 @@ function estenderTrecho() {
 
   const audio = state.audio;
   const novoTotal = ATTEMPT_DURATIONS[Math.min(state.attemptIndex, ATTEMPT_DURATIONS.length - 1)];
-  const restante = novoTotal - audio.currentTime;
+  const restante = novoTotal - (audio.currentTime - INICIO_DO_TRECHO);
   if (restante <= 0) return;
 
   const fill = $("#tape-fill");
   const maxDuration = ATTEMPT_DURATIONS[ATTEMPT_DURATIONS.length - 1];
 
   // Congela a barra onde ela está para o novo trecho continuar dali, sem salto.
-  const larguraAtual = (audio.currentTime / maxDuration) * 100;
+  const larguraAtual = ((audio.currentTime - INICIO_DO_TRECHO) / maxDuration) * 100;
   fill.style.transition = "none";
   fill.style.width = larguraAtual + "%";
   requestAnimationFrame(() => {
@@ -1145,7 +1162,7 @@ function estenderTrecho() {
   clearTimeout(state.playTimer);
   state.playTimer = setTimeout(() => {
     audio.pause();
-    audio.currentTime = 0;
+    audio.currentTime = INICIO_DO_TRECHO;
     state.playing = false;
     $("#btn-play-snippet").disabled = state.finished;
   }, restante * 1000);
