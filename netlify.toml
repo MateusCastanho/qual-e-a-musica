@@ -1,0 +1,29 @@
+# Site estático, sem build: publica a própria raiz do repositório.
+[build]
+  publish = "."
+  command = ""
+
+# O HTML nunca fica em cache: assim, ao publicar uma versão nova, quem já
+# jogou recebe a atualização na hora, sem precisar de Ctrl+Shift+R.
+[[headers]]
+  for = "/index.html"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
+
+# Os dados mudam junto com o jogo, então seguem a mesma regra.
+[[headers]]
+  for = "/data/*"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
+
+# CSS e JS podem ficar em cache: o ?v= no endereço já força a busca da versão
+# nova quando eles mudam.
+[[headers]]
+  for = "/*.css"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000"
+
+[[headers]]
+  for = "/*.js"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000"
