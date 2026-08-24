@@ -1,8 +1,7 @@
-// Músicas "isca": aparecem nas sugestões e podem ser chutadas, mas nunca são
-// a resposta (não têm youtubeId). Servem para o autocomplete não entregar a
-// resposta quando um artista tem poucas músicas jogáveis.
+// Músicas "isca": aparecem nas sugestões e podem ser chutadas, mas nunca
+// são a resposta (não têm previewUrl). Servem para o autocomplete não
+// entregar a resposta quando um artista tem poucas músicas jogáveis.
 const DECOY_SONGS = [
-  // Sertanejo
   { title: "Página de Amigos", artist: "Chitãozinho & Xororó" },
   { title: "Sinônimos", artist: "Chitãozinho & Xororó" },
   { title: "Flores em Vida", artist: "Zezé Di Camargo & Luciano" },
@@ -30,8 +29,6 @@ const DECOY_SONGS = [
   { title: "Bombonzinho", artist: "Israel & Rodolffo" },
   { title: "Marca Evidente", artist: "Israel & Rodolffo" },
   { title: "Como um Anjo", artist: "César Menotti & Fabiano" },
-
-  // Pagode / Samba
   { title: "Coração em Desalinho", artist: "Zeca Pagodinho" },
   { title: "Vai Vadiar", artist: "Zeca Pagodinho" },
   { title: "Buquê de Flores", artist: "Thiaguinho" },
@@ -54,8 +51,6 @@ const DECOY_SONGS = [
   { title: "Brincadeira de Criança", artist: "Molejo" },
   { title: "Tá Vendo Aquela Lua", artist: "Exaltasamba" },
   { title: "Livre pra Voar", artist: "Exaltasamba" },
-
-  // Forró
   { title: "Xote das Meninas", artist: "Luiz Gonzaga" },
   { title: "A Vida do Viajante", artist: "Luiz Gonzaga" },
   { title: "Baião", artist: "Luiz Gonzaga" },
@@ -71,8 +66,6 @@ const DECOY_SONGS = [
   { title: "De Volta pro Aconchego", artist: "Dominguinhos" },
   { title: "Coração de Aço", artist: "Xand Avião" },
   { title: "Comunicação Falhou", artist: "Nattan" },
-
-  // MPB
   { title: "O Leãozinho", artist: "Caetano Veloso" },
   { title: "Esperando na Janela", artist: "Gilberto Gil" },
   { title: "Olhos nos Olhos", artist: "Chico Buarque" },
@@ -96,8 +89,6 @@ const DECOY_SONGS = [
   { title: "Burguesinha", artist: "Seu Jorge" },
   { title: "Carolina", artist: "Seu Jorge" },
   { title: "Salão de Beleza", artist: "Zeca Baleiro" },
-
-  // Funk
   { title: "Bang", artist: "Anitta" },
   { title: "Downtown", artist: "Anitta" },
   { title: "Fala Mal de Mim", artist: "Ludmilla" },
@@ -108,10 +99,7 @@ const DECOY_SONGS = [
   { title: "Plaquê de 100", artist: "MC Guimê" },
   { title: "Cheia de Marra", artist: "MC Livinho" },
   { title: "Esqueci Como Namora", artist: "Nego do Borel" },
-  { title: "Sua Cara", artist: "Pabllo Vittar" },
   { title: "Evoluiu", artist: "Kevin o Chris" },
-
-  // Rock
   { title: "Bichos Escrotos", artist: "Titãs" },
   { title: "Pra Dizer Adeus", artist: "Titãs" },
   { title: "Primeiros Erros", artist: "Capital Inicial" },
@@ -136,8 +124,6 @@ const DECOY_SONGS = [
   { title: "O Vencedor", artist: "Los Hermanos" },
   { title: "Pescador de Ilusões", artist: "O Rappa" },
   { title: "Anjos (Pra Quem Tem Fé)", artist: "O Rappa" },
-
-  // Axé / Bossa Nova
   { title: "Rapunzel", artist: "Daniela Mercury" },
   { title: "Segura o Tchan", artist: "É o Tchan" },
   { title: "Diga Que Valeu", artist: "Chiclete com Banana" },
@@ -148,8 +134,6 @@ const DECOY_SONGS = [
   { title: "Mimar Você", artist: "Timbalada" },
   { title: "Faraó Divindade do Egito", artist: "Margareth Menezes" },
   { title: "Vem Neném", artist: "Harmonia do Samba" },
-
-  // Rap
   { title: "Vida Loka, Parte 1", artist: "Racionais MC's" },
   { title: "Vida Loka, Parte 2", artist: "Racionais MC's" },
   { title: "Homem na Estrada", artist: "Racionais MC's" },
@@ -160,8 +144,6 @@ const DECOY_SONGS = [
   { title: "Priscila", artist: "Baco Exu do Blues" },
   { title: "Cavalo de Troia", artist: "Xamã" },
   { title: "50 Cents", artist: "Filipe Ret" },
-
-  // Gospel
   { title: "Tua Graça Me Basta", artist: "Aline Barros" },
   { title: "Boas Novas", artist: "Aline Barros" },
   { title: "Digno É o Senhor", artist: "Fernandinho" },
@@ -178,8 +160,6 @@ const DECOY_SONGS = [
   { title: "Perfeita Comunhão", artist: "Toque no Altar" },
   { title: "Vim Te Adorar", artist: "Toque no Altar" },
   { title: "Preciso de Ti", artist: "Ana Paula Valadão" },
-
-  // ---- Ampliação: mais iscas por artista, para dificultar a dedução ----
   { title: "Samba do Arnesto", artist: "Adoniran Barbosa" },
   { title: "Tiro ao Álvaro", artist: "Adoniran Barbosa" },
   { title: "Joga a Chave", artist: "Adoniran Barbosa" },
@@ -636,8 +616,6 @@ const DECOY_SONGS = [
   { title: "Heavy Metal do Senhor", artist: "Zeca Baleiro" },
   { title: "Era Domingo", artist: "Zeca Baleiro" },
   { title: "No Dia Em Que Eu Saí de Casa", artist: "Zezé Di Camargo & Luciano" },
-
-  // ---- Iscas de rap e gospel ----
   { title: "Do Jeito", artist: "Rael" },
   { title: "Estrada", artist: "Rael" },
   { title: "Aurora Boreal", artist: "Rael" },
@@ -710,8 +688,6 @@ const DECOY_SONGS = [
   { title: "Jesus Meu Primeiro Amor", artist: "André Aquino" },
   { title: "Graça", artist: "André Aquino" },
   { title: "Eu Te Amo", artist: "André Aquino" },
-
-  // ---- Iscas dos artistas novos ----
   { title: "Sonho de um Caminhoneiro", artist: "Milionário & José Rico" },
   { title: "Sonhei com Você", artist: "Milionário & José Rico" },
   { title: "De Longe Também Se Ama", artist: "Milionário & José Rico" },
@@ -822,8 +798,6 @@ const DECOY_SONGS = [
   { title: "Sejas Bem Feliz", artist: "Cynthia Luz" },
   { title: "Como Deus Quiser", artist: "Cynthia Luz" },
   { title: "Coração Bandido", artist: "Cynthia Luz" },
-
-  // ---- Iscas de bossa, samba classico e gospel ----
   { title: "Canto de Iemanjá", artist: "Baden Powell" },
   { title: "Pra Que Chorar", artist: "Baden Powell" },
   { title: "Diz Que Fui Por Aí", artist: "Nara Leão" },
@@ -893,8 +867,6 @@ const DECOY_SONGS = [
   { title: "O Que Tua Glória Fez Comigo", artist: "Fernanda Brum" },
   { title: "Não É Tarde", artist: "Fernanda Brum" },
   { title: "A Glória do Pai", artist: "Fernanda Brum" },
-
-  // ---- Iscas do catálogo dos artistas ----
   { title: "Boate Azul / Ainda Ontem Chorei De Saudade", artist: "Chitãozinho & Xororó" },
   { title: "Não Aprendí a Dizer Adeus", artist: "Chitãozinho & Xororó" },
   { title: "Sinônimos / Pense Em Mim / É o Amor", artist: "Chitãozinho & Xororó" },
@@ -14415,7 +14387,6 @@ const DECOY_SONGS = [
   { title: "Juntos", artist: "Dilsinho" },
   { title: "Apaixonadin", artist: "Dilsinho" },
   { title: "Vai Me Dando Corda", artist: "Grupo Menos é Mais" },
-  { title: "Lapada Dela", artist: "Grupo Menos é Mais" },
   { title: "Brinda Aê", artist: "Grupo Menos é Mais" },
   { title: "Cohab City / Vem Pra Cá / Beijo Geladinho", artist: "Grupo Menos é Mais" },
   { title: "Quem / Frenesi / Deixa Alagar", artist: "Grupo Menos é Mais" },
@@ -26082,8 +26053,6 @@ const DECOY_SONGS = [
   { title: "Te Amo Mãe", artist: "Mattos Nascimento" },
   { title: "Clamo ao Leão da Tribo de Judá", artist: "Mattos Nascimento" },
   { title: "Cristo, O Fiel Amigo", artist: "Mattos Nascimento" },
-
-  // ---- Catálogo dos artistas que tinham poucas opções na busca ----
   { title: "Oitava", artist: "Banda Eva ft. Elba Ramalho" },
   { title: "Leão do Norte", artist: "Banda Eva ft. Elba Ramalho" },
   { title: "Vidinha De Balada / Nada Nada", artist: "Felipe Araújo part. Henrique & Juliano" },

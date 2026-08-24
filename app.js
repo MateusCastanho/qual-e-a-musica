@@ -246,6 +246,22 @@ const state = {
 
 // ---------- utils ----------
 
+// Igual ao normalize, mas SEM cortar em "ft."/"part.". O índice da busca usa
+// esta: com o corte, quem participa da faixa ficava invisível — "Loka" era
+// indexado como "loka simone e simaria" e procurar "Anitta" não achava nada,
+// mesmo sendo a voz que a pessoa reconheceu.
+function normalizeCompleto(str) {
+  return (str || "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .replace(/&/g, " e ")
+    .replace(/\b(feat|ft|part)\.?\b/g, " ")
+    .replace(/[^a-z0-9 ]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 function normalize(str) {
   return (str || "")
     .toLowerCase()
@@ -331,6 +347,39 @@ function casaPalavras(consulta, alvo) {
   return casouAlguma;
 }
 
+// Duas entradas são a MESMA gravação, só creditada de formas diferentes?
+// Acontece direto: "P do Pecado" existe como "Menos É Mais & Simone Mendes",
+// como "Grupo Menos é Mais" e como "Simone Mendes". Chutar qualquer uma
+// delas tem que valer acerto.
+//
+// shareArtist não resolve aqui: ele quebra o crédito em " e ", e nomes como
+// "Menos É Mais" viram pedaços soltos.
+//
+// A regra é contenção, não palavra em comum: o crédito menor tem que caber
+// inteiro no maior. "Simone Mendes" cabe em "Menos É Mais & Simone Mendes",
+// mas "João Gilberto" não cabe em "João Nogueira" — só dividem o primeiro
+// nome. Palavra em comum daria falso positivo em Roberto Menescal/Roberto
+// Carlos, Banda Calypso/Banda Eva, Luiz Caldas/Luiz Gonzaga.
+const PALAVRAS_GENERICAS = new Set(["banda", "grupo", "trio", "mc", "dj", "part", "feat", "ft"]);
+
+function mesmaMusica(a, b) {
+  if (!a || !b) return false;
+  if (normalize(a.title) !== normalize(b.title)) return false;
+  if (shareArtist(a.artist, b.artist)) return true;
+
+  // Mínimo de 2 letras, não 3: descartar "Zé" deixaria só o sobrenome, e
+  // "Zé Vaqueiro" passaria por "Manim Vaqueiro".
+  const nomes = (s) =>
+    normalize(s).split(" ").filter((w) => w.length >= 2 && !PALAVRAS_GENERICAS.has(w));
+  const A = nomes(a.artist);
+  const B = nomes(b.artist);
+  if (!A.length || !B.length) return false;
+
+  const [menor, maior] = A.length <= B.length ? [A, B] : [B, A];
+  const conjunto = new Set(maior);
+  return menor.every((w) => conjunto.has(w));
+}
+
 // Distância de edição limitada: devolve 99 se claramente maior que 2.
 function editDistance(a, b) {
   if (Math.abs(a.length - b.length) > 2) return 99;
@@ -387,13 +436,20 @@ function findSongByGuess(guessRaw) {
   found = pool.find((s) => fuzzyEquals(guessNorm, normalize(s.title)));
   if (found) return found;
 
-  found = pool.find((s) => {
+  // Entre os títulos contidos no chute, vence o mais longo — o mais
+  // específico. Pegar o primeiro fazia "P do Pecado - Grupo Menos é Mais"
+  // casar com uma música chamada "Mais", que também está ali dentro.
+  const porSubstring = pool.filter((s) => {
     const t = normalize(s.title);
     // t precisa de tamanho mínimo: título de 1-2 letras (ex.: "É") bateria
     // com qualquer chute que contenha essas letras.
     return guessNorm.length >= 3 && t.length >= 4 && (t.includes(guessNorm) || guessNorm.includes(t));
   });
-  if (found) return found;
+  if (porSubstring.length) {
+    return porSubstring.reduce((a, b) =>
+      normalize(b.title).length > normalize(a.title).length ? b : a
+    );
+  }
 
   // Última tentativa, por palavras soltas ("olha explosao" para "Olha a
   // Explosão"). Só vale se levar a UMA música: com duas ou mais candidatas
@@ -760,14 +816,15 @@ function getSuggestionPool() {
   const seen = new Set();
   suggestionPool = allGuessableSongs()
     .filter((s) => {
-      const key = normalize(`${s.title} ${s.artist}`);
+      const key = normalizeCompleto(`${s.title} ${s.artist}`);
       if (seen.has(key)) return false;
       seen.add(key);
       return true;
     })
     .map((s) => ({
       song: s,
-      searchText: normalize(`${s.title} ${s.artist}`),
+      // índice completo: inclui quem participa da faixa
+      searchText: normalizeCompleto(`${s.title} ${s.artist}`),
       titleNorm: normalize(s.title),
     }));
   return suggestionPool;
@@ -1088,7 +1145,10 @@ function handleGuess(guessRaw) {
   if (!guessRaw || !guessRaw.trim()) return;
 
   const guessedSong = findSongByGuess(guessRaw);
-  const isCorrect = !!guessedSong && guessedSong.id === state.currentSong.id;
+  // Vale acerto também quando é a mesma gravação sob outro crédito.
+  const isCorrect =
+    !!guessedSong &&
+    (guessedSong.id === state.currentSong.id || mesmaMusica(guessedSong, state.currentSong));
   const sameArtist =
     !isCorrect && !!guessedSong && shareArtist(guessedSong.artist, state.currentSong.artist);
 
