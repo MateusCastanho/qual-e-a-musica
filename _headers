@@ -1,0 +1,20 @@
+# Cabeçalhos para Cloudflare Pages — mesmas regras do netlify.toml.
+#
+# O HTML e os dados nunca ficam em cache: ao publicar uma versão nova, quem já
+# jogou recebe a atualização na hora, sem precisar de Ctrl+Shift+R.
+/index.html
+  Cache-Control: public, max-age=0, must-revalidate
+
+/
+  Cache-Control: public, max-age=0, must-revalidate
+
+/data/*
+  Cache-Control: public, max-age=0, must-revalidate
+
+# CSS e JS podem ficar em cache longo: o ?v= no endereço já força a busca da
+# versão nova quando eles mudam.
+/*.css
+  Cache-Control: public, max-age=31536000
+
+/*.js
+  Cache-Control: public, max-age=31536000
