@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#261507">
+  <meta name="description" content="Combine gemas, descubra dez câmaras e encontre a Lendária. Um puzzle para jogar com um dedo.">
+  <title>Merge Gems · As dez câmaras</title>
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="temple.css">
+  <script defer src="engine.js"></script>
+  <script defer src="game.js"></script>
+</head>
+<body>
+<main class="app">
+  <header class="topbar"><a class="wordmark" href="#" id="home-link" aria-label="Menu do Merge Gems">MERGE <b>GEMS</b><span>AS DEZ CÂMARAS</span></a><button class="icon-button" id="sound" aria-label="Ativar som" aria-pressed="false">♪</button></header>
+  <section id="home" class="screen home">
+    <div class="seal" aria-hidden="true"><div class="hero-gem"></div><span>✦</span></div>
+    <p class="eyebrow">UMA PEQUENA DESCOBERTA A CADA FUSÃO</p>
+    <h1>O extraordinário<br>começa com <em>duas.</em></h1>
+    <p class="intro">Junte gemas iguais. Abra novas câmaras.<br>Duas Lendárias ativam o WILD e limpam tudo.</p>
+    <div class="home-stats"><div><strong id="home-best">0</strong><span>RECORDE INFINITO</span></div><div><strong id="home-collection">1 / 10</strong><span>GEMAS DESCOBERTAS</span></div></div>
+    <div class="home-actions"><button class="primary" id="continue" hidden>Continuar partida <span>→</span></button><button class="primary" id="campaign">Explorar as câmaras <span>→</span></button><button class="secondary" id="endless">Jogar no infinito <span>∞</span></button></div>
+    <nav class="home-nav" aria-label="Mais opções"><button id="collection">Coleção</button><span>✦</span><button id="help">Como jogar</button></nav>
+    <p class="footnote" id="save-status">Seu progresso fica salvo neste aparelho.</p>
+  </section>
+  <section id="play" class="screen play" hidden>
+    <div class="scorebar"><div><span>PONTOS</span><strong id="score">0</strong></div><div class="goal"><span id="goal-label">META · 1.200</span><div class="progress"><i id="progress"></i></div></div><div class="combo"><span>COMBO</span><strong id="combo">×1</strong></div><button class="icon-button" id="pause" aria-label="Pausar partida">☰</button></div>
+    <div class="board"><canvas id="board" width="720" height="1040" tabindex="0" aria-label="Tabuleiro. Toque e solte para lançar uma gema. Arraste gemas para combinar. No teclado, use as setas e espaço para lançar."></canvas><div id="toast" role="status" aria-live="polite"></div></div>
+  </section>
+</main>
+<dialog id="dialog" aria-labelledby="dialog-title"><div class="dialog-body"><p class="eyebrow" id="dialog-kicker"></p><h2 id="dialog-title"></h2><div id="dialog-content"></div><div id="dialog-actions"></div></div></dialog>
+<script>/* All game assets are local. No account or connection is needed after loading. */</script>
+</body>
+</html>
+
