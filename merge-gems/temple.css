@@ -1,0 +1,26 @@
+/* The gold temple skin shares the existing responsive layout. */
+body{background:radial-gradient(ellipse at 50% 10%,#79501d,transparent 65%),#150c04}
+.app{background:radial-gradient(ellipse at 50% 25%,#8e5c1b30,transparent 70%),repeating-linear-gradient(90deg,#ffd35d03 0 1px,transparent 1px 48px),#261507;box-shadow:0 0 100px #0009}
+.topbar{border-bottom:2px solid #ae711d;box-shadow:0 3px 0 #160a04;padding-bottom:10px;min-height:58px}
+.wordmark{font-weight:bold;text-shadow:0 2px 1px #000;letter-spacing:2px}.wordmark b{color:#ffd856}
+.icon-button{background:linear-gradient(#644119,#2a1708);border-color:#b47b2a;box-shadow:inset 0 1px #ffe79640}
+.seal{border:3px double #ecb84c;border-radius:22px;background:radial-gradient(circle,#ffaa0029,transparent 72%),linear-gradient(135deg,#59330f,#241104);box-shadow:0 0 28px #ffbf0012,inset 0 0 15px #0009;transform:rotate(5deg)}
+.seal:before{border:1px solid #d9982f75;border-radius:14px}.seal:after{border-color:#ffc95430;border-radius:25px}.seal span{background:#382109;border:1px solid #a46b1c;border-radius:50%;bottom:-12px}
+.hero-gem{width:86px;height:90px;transform:rotate(-5deg);clip-path:polygon(28% 0,72% 0,100% 27%,100% 73%,72% 100%,28% 100%,0 73%,0 27%);background:conic-gradient(from 22deg at 50% 48%,#a8ff53,#1cab00 14%,#064900 26%,#68ff13 36%,#096900 46%,#003e00 59%,#3de700 72%,#edffd1 85%,#58fc12)}
+.primary{background:linear-gradient(175deg,#fff3a0 0,#f5c64f 28%,#dda029 70%,#c07d12);border-color:#ffde70;color:#3b2106;box-shadow:inset 0 1px #fff7cb,0 3px 0 #7d470c}
+.secondary,.powers button,.chambers button{background:linear-gradient(#59381477,#2e1b09);border-color:#a470294f}
+.board{border:4px ridge #d69933;border-radius:9px;background:#3f260d;box-shadow:0 0 0 1px #522e05,0 7px 15px #0005,inset 0 0 25px #0006}
+.powers button{border-radius:8px;box-shadow:inset 0 1px #efba4820}.powers button.active{border-color:#ffde66;background:#98600b55}.power-icon{color:#ffe46b}
+.progress i{background:linear-gradient(90deg,#b67c18,#ffdf71)}
+#toast{background:#3c2307ed;border-color:#c0923c}
+dialog{background:linear-gradient(145deg,#614018,#261405);border:2px solid #bd8b36;border-radius:14px}dialog::backdrop{background:#120a03c7}
+.reward{background:#b7f6420c;border-color:#bfd95030}
+@media(max-height:740px){.hero-gem{width:61px;height:64px}.topbar{min-height:50px}}
+/* During a round, the board gets the space previously used by both panels. */
+.app:has(#play:not([hidden])){max-width:600px;padding: max(5px,env(safe-area-inset-top)) 6px max(5px,env(safe-area-inset-bottom));background:#10091a}
+.app:has(#play:not([hidden])) .topbar{display:none}
+.play{padding-top:0;gap:6px}
+.play .scorebar{border:0;padding:2px 6px;gap:14px;flex-shrink:0;min-height:48px}
+.scorebar .icon-button{width:40px;height:40px;min-width:40px;font-size:18px}
+.play .board{min-height:200px;border:1px solid #b99b6266;border-radius:9px;background:#08020f;box-shadow:0 0 0 1px #0009}
+
