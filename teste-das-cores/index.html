@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste das Cores - Qual é a Cor do seu Cérebro?</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            transition: background-color 0.5s ease;
+        }
+        .card {
+            background-color: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        .option-button.selected {
+            transform: scale(0.95);
+            opacity: 0.5;
+            box-shadow: none;
+        }
+        .option-button .rank-badge {
+            display: none;
+        }
+        .option-button.selected .rank-badge {
+            display: flex;
+        }
+        .tab-button.active {
+            border-bottom-width: 4px;
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 flex items-center justify-center min-h-screen p-4 transition-colors duration-500">
+
+    <div id="app" class="w-full max-w-4xl mx-auto">
+        
+        <!-- Tela Inicial -->
+        <div id="start-screen" class="card rounded-2xl p-8 shadow-2xl text-center">
+            <h1 class="text-4xl font-bold text-gray-800 mb-4">Teste das Cores</h1>
+            <p class="text-gray-600 mb-6 text-lg">Descubra a cor da sua personalidade com este teste rápido e detalhado.</p>
+            <h2 class="text-2xl font-semibold text-gray-700 mb-4">Instruções</h2>
+            <p class="text-gray-600 mb-2">Para cada grupo de 4 palavras, clique nelas em ordem:</p>
+            <p class="text-gray-600 mb-8"><strong class="text-red-600">Primeiro clique:</strong> a que <strong class="underline">MAIS</strong> se parece com você (vale 4 pontos).<br><strong class="text-blue-600">Último clique:</strong> a que <strong class="underline">MENOS</strong> se parece com você (vale 1 ponto).</p>
+            
+            <button id="start-button" class="bg-indigo-600 text-white font-bold py-3 px-8 rounded-lg shadow-lg hover:bg-indigo-700 transition-transform transform hover:scale-105 focus:outline-none focus:ring-4 focus:ring-indigo-300">
+                Começar o Teste
+            </button>
+        </div>
+
+        <!-- Tela de Perguntas -->
+        <div id="question-screen" class="hidden">
+            <div id="question-header" class="text-center mb-6">
+                <p id="question-topic" class="text-xl font-semibold text-gray-700 mb-2"></p>
+                <p class="text-sm text-gray-500">Questão <span id="question-number">1</span> de 12</p>
+            </div>
+            <div class="progress-bar w-full bg-gray-300 rounded-full h-2.5 mb-8">
+                <div id="progress" class="bg-indigo-600 h-2.5 rounded-full" style="width: 0%"></div>
+            </div>
+            <div id="options-container" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <!-- Opções serão inseridas aqui pelo JS -->
+            </div>
+            <div id="ranking-info" class="text-center mt-6 text-gray-600 font-semibold">
+                <span>Clique na palavra que <strong class="underline">MAIS</strong> te descreve.</span>
+            </div>
+        </div>
+        
+        <!-- Tela de Resultados -->
+        <div id="result-screen" class="hidden">
+             <div class="card rounded-2xl p-6 md:p-10 shadow-2xl text-left">
+                <div class="text-center mb-8">
+                    <p class="text-2xl font-semibold mb-2 text-gray-700">Sua cor é...</p>
+                    <h1 id="result-color-name" class="text-6xl font-bold mb-4"></h1>
+                    <p id="result-description" class="text-lg max-w-2xl mx-auto text-gray-600"></p>
+                </div>
+
+                <div class="grid md:grid-cols-2 gap-8">
+                    <!-- Coluna de Detalhes -->
+                    <div>
+                        <h2 class="text-2xl font-bold text-gray-800 mb-4 border-b-2 pb-2">Suas Características</h2>
+                        <ul id="result-details" class="space-y-3 text-gray-700">
+                            <!-- Detalhes da personalidade serão inseridos aqui -->
+                        </ul>
+                    </div>
+                    <!-- Coluna de Perspectivas -->
+                    <div>
+                        <h2 class="text-2xl font-bold text-gray-800 mb-4 border-b-2 pb-2">Como você vê os outros?</h2>
+                        <div id="perspectives-container">
+                            <div id="perspective-tabs" class="flex border-b border-gray-300 mb-4">
+                                <!-- Abas das cores serão inseridas aqui -->
+                            </div>
+                            <div id="perspective-content" class="text-gray-700">
+                                <!-- Conteúdo das perspectivas será inserido aqui -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-10 pt-6 border-t">
+                    <h2 class="text-2xl font-semibold mb-4 text-gray-800 text-center">Pontuação Final</h2>
+                    <div id="scores-container" class="grid grid-cols-2 md:grid-cols-4 gap-4 text-white">
+                        <!-- Pontuações serão inseridas aqui -->
+                    </div>
+                </div>
+
+                <div class="text-center">
+                    <button id="restart-button" class="mt-10 bg-white text-gray-800 font-bold py-3 px-8 rounded-lg shadow-md hover:bg-gray-200 transition-transform transform hover:scale-105 focus:outline-none focus:ring-4 ring-gray-300">
+                        Refazer o Teste
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // Definição das perguntas
+            const questions = [
+                { topic: "Eu sou:", options: { a: "organizado", b: "criativo", c: "independente", d: "impulsivo" } },
+                { topic: "Eu sou:", options: { a: "pontual", b: "comunicativo", c: "curioso", d: "divertido" } },
+                { topic: "Eu sou:", options: { a: "detalhista", b: "flexível", c: "calmo", d: "competitivo" } },
+                { topic: "Eu sou:", options: { a: "responsável", b: "atencioso", c: "analítico", d: "engenhoso" } },
+                { topic: "Eu sou:", options: { a: "comprometido", b: "sensível", c: "pensativo", d: "corajoso" } },
+                { topic: "Eu sou:", options: { a: "cuidadoso", b: "cooperativo", c: "técnico", d: "ativo" } },
+                { topic: "Eu sou:", options: { a: "disciplinado", b: "carinhoso", c: "independente", d: "ousado" } },
+                { topic: "Eu sou:", options: { a: "respeitoso", b: "autêntico", c: "competente", d: "generoso" } },
+                { topic: "Eu sou:", options: { a: "previsível", b: "protetor", c: "questionador", d: "espontâneo" } },
+                { topic: "Quando tomo decisões, eu gosto de:", options: { a: "ter um plano", b: "conversar com outras pessoas", c: "colher fatos, informações", d: "confiar nos meus instintos" } },
+                { topic: "Quando trabalho em equipe, me vejo como:", options: { a: "instrutor", b: "membro da equipe", c: "solucionador de problemas", d: "negociador de impasses" } },
+                { topic: "Sinto-me mais à vontade em ambientes que apoiam meu senso de:", options: { a: "estabilidade", b: "harmonia", c: "privacidade", d: "liberdade" } }
+            ];
+
+            // Definição das cores com detalhes e perspectivas (extraído do PDF)
+            const colorMapping = {
+                a: { 
+                    name: "AMARELO", 
+                    color: "#FBBF24",
+                    textColor: "#92400E",
+                    description: "Pessoas leais, responsáveis, respeitadoras e organizadas. Valorizam tradições, estabilidade e compromissos. Buscam sempre planejar.",
+                    details: {
+                        "Vejo a mim mesmo como": "confiável, pontual e responsável.",
+                        "Sou naturalmente": "respeitoso, interessado.",
+                        "Eu valorizo": "tradição e estabilidade.",
+                        "Minha postura é": "ter um forte senso de certo e errado.",
+                        "Minhas prioridades são": "organização e disciplina.",
+                        "No trabalho, eu": "sou bem preparado, comprometido e detalhista.",
+                        "Nas relações, sou": "prático e sério.",
+                        "Os outros podem me ver como": "previsível, inflexível e controlador.",
+                        "O que me incomoda": "desorganização.",
+                        "Quando frustrado, posso me tornar": "ansioso e preocupado."
+                    },
+                    perspectives: {
+                        a: ["Organizado", "Confiável", "Leal", "Previsível", "Pontual", "Responsável"],
+                        b: ["Honesto", "Harmonioso", "Bondoso", "Sensível", "Trabalhador em equipe"],
+                        c: ["Distraído", "Franco", "Solucionador de problemas", "Reservado", "Independente"],
+                        d: ["Impulsivo", "Impaciente", "Divertido", "Oportunista", "Desorganizado"]
+                    }
+                },
+                b: { 
+                    name: "AZUL", 
+                    color: "#3B82F6",
+                    textColor: "#1E40AF",
+                    description: "Pessoas criativas, comunicativas e que gostam de ajudar. Valorizam confiança, empatia e cooperação. São voltadas para a Emoção.",
+                    details: {
+                        "Vejo a mim mesmo como": "prestativo, comunicativo e criativo.",
+                        "Sou naturalmente": "carinhoso, flexível e protetor.",
+                        "Eu valorizo": "honestidade e empatia.",
+                        "Minha postura é": "entusiástica e bondosa.",
+                        "Minhas prioridades são": "harmonia e abraços.",
+                        "No trabalho, eu": "sou motivador, dou sugestões e compartilho.",
+                        "Nas relações, sou": "atencioso e romântico.",
+                        "Os outros podem me ver como": "muito emotivo, falante e ingênuo.",
+                        "O que me incomoda": "falta de cooperação.",
+                        "Quando frustrado, posso me tornar": "resistente e até depressivo."
+                    },
+                    perspectives: {
+                        a: ["Organizado", "Muito disciplinado", "Rígido", "Objetivo", "Leal", "Tipo executivo"],
+                        b: ["Criativo", "Emotivo", "Intuitivo", "Protetor", "Comunicativo", "Confiável"],
+                        c: ["Inteligente demais", "Intimidante", "Acadêmico", "Frio", "Isolado", "Pouco comunicativo"],
+                        d: ["Irresponsável", "Corajoso", "Desorganizado", "Divertido", "Adaptável", "Pragmático"]
+                    }
+                },
+                c: { 
+                    name: "VERDE", 
+                    color: "#10B981",
+                    textColor: "#065F46",
+                    description: "Pessoas lógicas, que valorizam sabedoria, competência e independência. São pessoas reservadas e voltadas para a Razão.",
+                    details: {
+                        "Vejo a mim mesmo como": "lógico, inteligente e comedido.",
+                        "Sou naturalmente": "não-conformista e visionário.",
+                        "Eu valorizo": "conhecimento e eficiência.",
+                        "Minha postura é": "ser autossuficiente e justo.",
+                        "Minhas prioridades são": "independência e privacidade.",
+                        "No trabalho, eu": "sei utilizar a tecnologia mais recente.",
+                        "Nas relações, sou": "sensível, mas não confortável com emoções.",
+                        "Os outros podem me ver como": "realista, insensível e intimidante.",
+                        "O que me incomoda": "incompetência.",
+                        "Quando frustrado, eu": "retraio-me e posso me tornar indeciso."
+                    },
+                    perspectives: {
+                        a: ["Burocrático", "Controlador", "Metódico", "Organizado", "Confiável", "Planejador"],
+                        b: ["Emotivo", "Atencioso", "Focado nos relacionamentos", "Prestativo", "Idealista", "Criativo"],
+                        c: ["Produtivo", "Lógico", "Inovador", "Bem informado", "Preciso", "Eficiente"],
+                        d: ["Impulsivo", "Corajoso", "Espontâneo", "Irresponsável", "Gerador de ideias", "Agente transformador"]
+                    }
+                },
+                d: { 
+                    name: "LARANJA", 
+                    color: "#F97316",
+                    textColor: "#9A3412",
+                    description: "Representa pessoas enérgicas e corajosas. Valorizam empreendedorismo, desenvoltura e generosidade. São competitivas e adoram desafios.",
+                    details: {
+                        "Vejo a mim mesmo como": "dinâmico, generoso e espontâneo.",
+                        "Sou naturalmente": "bom negociador e diplomático.",
+                        "Eu valorizo": "aventura и diferentes habilidades.",
+                        "Minha postura é": "entusiástica e corajosa.",
+                        "Minhas prioridades são": "liberdade e diversão.",
+                        "No trabalho, eu sou": "empreendedor e competitivo.",
+                        "Nas relações, sou": "cheio de energia.",
+                        "Os outros podem me ver como": "desorganizado, teimoso e irresponsável.",
+                        "O que me incomoda": "regras e diretrizes de outra pessoa.",
+                        "Quando frustrado, eu": "'desisto' física e mentalmente."
+                    },
+                    perspectives: {
+                        a: ["Controlador", "Organizado", "Planejador", "Estruturado", "Teimoso", "Crítico"],
+                        b: ["Amistoso", "Sensível", "Romântico", "Criativo", "Atencioso", "Bom ouvinte"],
+                        c: ["Chato", "Ligado a fatos", "Intelectual", "Lento", "Analítico", "Insensível"],
+                        d: ["Decidido", "Capaz", "Rápido", "Influente", "Assume riscos", "Competente"]
+                    }
+                }
+            };
+
+            // Variáveis de estado
+            let currentQuestionIndex = 0;
+            let scores = { a: 0, b: 0, c: 0, d: 0 };
+            let currentQuestionAnswers = [];
+            let currentRank = 4;
+
+            // Elementos da UI
+            const startScreen = document.getElementById('start-screen');
+            const questionScreen = document.getElementById('question-screen');
+            const resultScreen = document.getElementById('result-screen');
+            const startButton = document.getElementById('start-button');
+            const restartButton = document.getElementById('restart-button');
+            
+            const questionTopic = document.getElementById('question-topic');
+            const questionNumber = document.getElementById('question-number');
+            const progress = document.getElementById('progress');
+            const optionsContainer = document.getElementById('options-container');
+            const rankingInfo = document.getElementById('ranking-info');
+
+            // Funções
+            function startTest() {
+                currentQuestionIndex = 0;
+                scores = { a: 0, b: 0, c: 0, d: 0 };
+                startScreen.classList.add('hidden');
+                resultScreen.classList.add('hidden');
+                questionScreen.classList.remove('hidden');
+                document.body.style.backgroundColor = '';
+                document.body.className = 'bg-gray-100 flex items-center justify-center min-h-screen p-4 transition-colors duration-500';
+                loadQuestion();
+            }
+
+            function loadQuestion() {
+                currentQuestionAnswers = [];
+                currentRank = 4;
+                updateRankingInfo();
+                
+                const question = questions[currentQuestionIndex];
+                questionTopic.textContent = question.topic;
+                questionNumber.textContent = currentQuestionIndex + 1;
+                progress.style.width = `${((currentQuestionIndex + 1) / questions.length) * 100}%`;
+                
+                optionsContainer.innerHTML = '';
+                Object.entries(question.options).forEach(([key, value]) => {
+                    const button = document.createElement('button');
+                    button.className = "option-button w-full p-6 rounded-lg shadow-md text-lg font-semibold text-gray-700 bg-white hover:bg-gray-50 transition-all duration-200 transform hover:-translate-y-1 relative";
+                    button.dataset.key = key;
+                    
+                    const textSpan = document.createElement('span');
+                    textSpan.textContent = value;
+                    button.appendChild(textSpan);
+
+                    const rankBadge = document.createElement('span');
+                    rankBadge.className = "rank-badge absolute -top-3 -right-3 bg-indigo-600 text-white w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm border-2 border-white";
+                    button.appendChild(rankBadge);
+
+                    button.addEventListener('click', () => handleOptionClick(button));
+                    optionsContainer.appendChild(button);
+                });
+            }
+
+            function handleOptionClick(button) {
+                if (button.classList.contains('selected')) return;
+
+                button.classList.add('selected');
+                const rankBadge = button.querySelector('.rank-badge');
+                rankBadge.textContent = currentRank;
+
+                currentQuestionAnswers.push({
+                    key: button.dataset.key,
+                    rank: currentRank
+                });
+
+                currentRank--;
+                updateRankingInfo();
+
+                if (currentQuestionAnswers.length === 4) {
+                    processQuestionAnswers();
+                }
+            }
+            
+            function updateRankingInfo() {
+                const rankTextMap = {
+                    4: "Clique na palavra que <strong>MAIS</strong> te descreve.",
+                    3: "Agora, a que mais se aproxima de você.",
+                    2: "Agora, a próxima que menos te descreve.",
+                    1: "Finalmente, a palavra que <strong>MENOS</strong> te descreve."
+                };
+
+                if (currentRank >= 1) {
+                    rankingInfo.innerHTML = `<span>${rankTextMap[currentRank]} <strong class="text-indigo-600">(Peso ${currentRank})</strong></span>`;
+                }
+            }
+
+            function processQuestionAnswers() {
+                currentQuestionAnswers.forEach(answer => {
+                    scores[answer.key] += answer.rank;
+                });
+                
+                rankingInfo.innerHTML = `<span class="text-green-600 font-bold">Ótimo! Próxima pergunta...</span>`;
+
+                setTimeout(() => {
+                    currentQuestionIndex++;
+                    if (currentQuestionIndex < questions.length) {
+                        loadQuestion();
+                    } else {
+                        showResults();
+                    }
+                }, 1000);
+            }
+
+            function showResults() {
+                questionScreen.classList.add('hidden');
+                
+                let maxScore = -1;
+                let resultKey = '';
+                Object.entries(scores).forEach(([key, score]) => {
+                    if (score > maxScore) {
+                        maxScore = score;
+                        resultKey = key;
+                    }
+                });
+
+                const resultColor = colorMapping[resultKey];
+
+                // Atualiza cor de fundo e UI
+                document.body.style.backgroundColor = resultColor.color;
+                document.getElementById('result-color-name').textContent = resultColor.name;
+                document.getElementById('result-color-name').style.color = resultColor.textColor;
+                document.getElementById('result-description').textContent = resultColor.description;
+
+                // Preenche os detalhes da personalidade
+                const detailsList = document.getElementById('result-details');
+                detailsList.innerHTML = '';
+                Object.entries(resultColor.details).forEach(([key, value]) => {
+                    const li = document.createElement('li');
+                    li.innerHTML = `<strong class="font-semibold">${key}:</strong> ${value}`;
+                    detailsList.appendChild(li);
+                });
+
+                // Preenche as pontuações
+                const scoresContainer = document.getElementById('scores-container');
+                scoresContainer.innerHTML = '';
+                Object.entries(scores).sort(([,a],[,b]) => b-a).forEach(([key, score]) => {
+                    const colorInfo = colorMapping[key];
+                    const scoreDiv = document.createElement('div');
+                    scoreDiv.className = 'p-4 rounded-lg shadow-md';
+                    scoreDiv.style.backgroundColor = colorInfo.color;
+                    scoreDiv.innerHTML = `
+                        <p class="font-bold text-xl">${colorInfo.name}</p>
+                        <p class="text-3xl font-bold">${score}</p>
+                    `;
+                    scoresContainer.appendChild(scoreDiv);
+                });
+                
+                // Preenche as perspectivas
+                const perspectiveTabs = document.getElementById('perspective-tabs');
+                const perspectiveContent = document.getElementById('perspective-content');
+                perspectiveTabs.innerHTML = '';
+                perspectiveContent.innerHTML = '';
+                
+                Object.keys(colorMapping).forEach((key, index) => {
+                    const colorInfo = colorMapping[key];
+                    // Cria a aba
+                    const tabButton = document.createElement('button');
+                    tabButton.textContent = colorInfo.name;
+                    tabButton.className = 'tab-button flex-1 py-2 px-1 text-sm md:text-base font-semibold border-b-2 transition-colors duration-300';
+                    tabButton.style.borderColor = 'transparent';
+                    tabButton.style.color = colorInfo.textColor;
+                    tabButton.dataset.target = `content-${key}`;
+                    
+                    if (key === resultKey) {
+                        tabButton.style.borderColor = colorInfo.textColor;
+                        tabButton.classList.add('active');
+                    }
+                    
+                    perspectiveTabs.appendChild(tabButton);
+
+                    // Cria o conteúdo da aba
+                    const contentDiv = document.createElement('div');
+                    contentDiv.id = `content-${key}`;
+                    contentDiv.className = 'tab-content p-4 bg-white/30 rounded-b-lg';
+                    if (key === resultKey) {
+                        contentDiv.classList.add('active');
+                    }
+                    
+                    const perspectiveList = document.createElement('ul');
+                    perspectiveList.className = 'list-disc list-inside space-y-1';
+                    
+                    const adjectives = resultColor.perspectives[key];
+                    adjectives.forEach(adj => {
+                        const li = document.createElement('li');
+                        li.textContent = adj;
+                        perspectiveList.appendChild(li);
+                    });
+
+                    contentDiv.appendChild(perspectiveList);
+                    perspectiveContent.appendChild(contentDiv);
+
+                    // Adiciona evento de clique na aba
+                    tabButton.addEventListener('click', () => {
+                        // Desativa todas as abas e conteúdos
+                        perspectiveTabs.querySelectorAll('.tab-button').forEach(btn => {
+                            btn.classList.remove('active');
+                            btn.style.borderColor = 'transparent';
+                        });
+                        perspectiveContent.querySelectorAll('.tab-content').forEach(content => {
+                            content.classList.remove('active');
+                        });
+                        
+                        // Ativa a aba e conteúdo clicado
+                        tabButton.classList.add('active');
+                        tabButton.style.borderColor = colorInfo.textColor;
+                        document.getElementById(tabButton.dataset.target).classList.add('active');
+                    });
+                });
+
+                resultScreen.classList.remove('hidden');
+            }
+
+            // Event Listeners
+            startButton.addEventListener('click', startTest);
+            restartButton.addEventListener('click', startTest);
+        });
+    </script>
+</body>
+</html>
