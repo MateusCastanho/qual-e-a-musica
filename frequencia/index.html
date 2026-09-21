@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Frequência</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8f9fa;
+            color: #2d3436;
+            overscroll-behavior: none;
+            touch-action: none;
+        }
+
+        :root {
+            --color-device: #162e47;    
+            --color-face: #f1f1f1;      
+            --color-needle: #d63031;    
+            --color-zone-4: #00b894;    
+            --color-zone-3: #ff4757;    
+            --color-zone-2: #ffa502;    
+        }
+
+        .device-shadow { filter: drop-shadow(0 10px 15px rgba(22, 46, 71, 0.4)); }
+        .needle-shadow { filter: drop-shadow(2px 4px 6px rgba(0,0,0,0.3)); }
+        .hidden { display: none !important; }
+        .fade-in { animation: fadeIn 0.5s ease-out; }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .no-select { user-select: none; -webkit-user-select: none; }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col items-center justify-center p-4">
+
+    <!-- CABEÇALHO -->
+    <div class="w-full max-w-2xl flex justify-between items-center mb-6 bg-white p-4 rounded-xl shadow-sm border border-slate-200">
+        <div class="flex items-center gap-2">
+            <i data-lucide="activity" class="text-[#162e47] w-6 h-6"></i>
+            <h1 class="text-2xl font-black tracking-tight text-[#162e47]">FREQUÊNCIA</h1>
+        </div>
+        <div class="flex items-center gap-4">
+            <div class="text-xs font-bold text-slate-400 uppercase tracking-widest">PONTOS</div>
+            <div id="scoreDisplay" class="text-3xl font-black text-[#162e47]">0</div>
+        </div>
+    </div>
+
+    <!-- ÁREA DO JOGO -->
+    <main class="w-full max-w-2xl bg-white rounded-3xl p-6 shadow-xl border border-slate-100 relative overflow-hidden text-center">
+        
+        <!-- INTRO / MENU -->
+        <div id="screenIntro" class="fade-in py-4">
+            <i data-lucide="waves" class="w-16 h-16 text-[#00b894] mx-auto mb-6"></i>
+            <h2 class="text-2xl font-bold mb-2 text-slate-800">Vamos encontrar a Frequência?</h2>
+            <p class="text-slate-500 mb-8 text-sm">O jogo de telepatia e sintonia fina.</p>
+            
+            <!-- Botões de Modo -->
+            <div class="space-y-4 max-w-xs mx-auto">
+                <button onclick="startGame('classic')" class="w-full bg-[#162e47] hover:bg-[#2c3e50] text-white font-bold py-4 px-6 rounded-xl text-lg transition-all transform hover:scale-105 shadow-lg flex items-center justify-center gap-3">
+                    <i data-lucide="play"></i> Modo Clássico
+                </button>
+                
+                <button onclick="toggleCustomMode()" class="w-full bg-white hover:bg-slate-50 text-[#162e47] border-2 border-[#162e47] font-bold py-4 px-6 rounded-xl text-lg transition-all flex items-center justify-center gap-3">
+                    <i data-lucide="edit-3"></i> Modo Livre
+                </button>
+            </div>
+
+            <!-- Área de Input do Modo Livre -->
+            <div id="customInputArea" class="hidden mt-6 bg-slate-50 p-4 rounded-xl border border-slate-200 animate-fade-in">
+                <h3 class="font-bold text-slate-700 mb-3">Criar Conceito Personalizado</h3>
+                <div class="flex gap-2 mb-4">
+                    <input id="customLeft" type="text" placeholder="Ex: Frio" class="w-1/2 p-2 rounded border border-slate-300 text-center text-sm font-bold text-slate-700 focus:outline-none focus:border-[#162e47]">
+                    <input id="customRight" type="text" placeholder="Ex: Quente" class="w-1/2 p-2 rounded border border-slate-300 text-center text-sm font-bold text-slate-700 focus:outline-none focus:border-[#162e47]">
+                </div>
+                <button onclick="startGame('custom')" class="w-full bg-[#00b894] hover:bg-[#00a383] text-white font-bold py-3 rounded-lg shadow transition-colors">
+                    Jogar Rodada
+                </button>
+            </div>
+            
+            <div class="mt-8 text-xs text-slate-400">
+                1. Médium vê o alvo e dá dica. <br>
+                2. Grupo ajusta o ponteiro. <br>
+                3. Revele e pontue!
+            </div>
+        </div>
+
+        <!-- JOGO -->
+        <div id="screenGame" class="hidden fade-in relative z-10">
+            
+            <!-- BARRA DE CONTROLE -->
+            <div class="flex justify-between items-center mb-3 px-1">
+                <button id="btnSkip" onclick="skipCard()" class="text-slate-400 hover:text-[#162e47] transition-colors flex items-center gap-1 text-xs font-bold uppercase tracking-wider" title="Pular Tema">
+                    <i data-lucide="shuffle" class="w-4 h-4"></i> Aleatório
+                </button>
+
+                <button onclick="resetToMenu()" class="text-slate-400 hover:text-red-500 transition-colors flex items-center gap-1 text-xs font-bold uppercase tracking-wider" title="Sair / Menu">
+                    Sair <i data-lucide="x" class="w-4 h-4"></i>
+                </button>
+            </div>
+
+            <!-- CARTA -->
+            <div class="bg-white rounded-xl p-4 mb-2 border border-slate-200 flex justify-between items-center shadow-md relative overflow-hidden group">
+                <div class="absolute top-0 left-0 w-2 h-full bg-[#162e47]"></div>
+                <div id="conceptLeft" class="text-lg md:text-2xl font-black text-slate-700 w-1/2 text-center border-r-2 border-dashed border-slate-200 pr-2 break-words">ESQUERDA</div>
+                <div id="conceptRight" class="text-lg md:text-2xl font-black text-slate-700 w-1/2 text-center pl-2 break-words">DIREITA</div>
+            </div>
+
+            <!-- MOSTRADOR -->
+            <div class="relative w-full max-w-xl mx-auto aspect-[400/230] flex items-end justify-center no-select mt-4" id="dialContainer">
+                <svg viewBox="0 0 400 230" class="w-full h-full device-shadow overflow-visible">
+                    <defs>
+                        <radialGradient id="knobGradient" cx="50%" cy="50%" r="50%" fx="30%" fy="30%">
+                            <stop offset="0%" stopColor="#ff7675" />
+                            <stop offset="100%" stopColor="#d63031" />
+                        </radialGradient>
+                    </defs>
+
+                    <!-- Base do Dispositivo -->
+                    <path d="M 20 220 A 180 180 0 0 1 380 220 L 380 230 L 20 230 Z" fill="#162e47" />
+                    <path d="M 40 220 A 160 160 0 0 1 360 220 L 200 220 Z" fill="#f1f1f1" />
+
+                    <!-- Zonas de Pontuação -->
+                    <g id="targetZones" class="opacity-0 transition-opacity duration-500"></g>
+
+                    <!-- Cobertura -->
+                    <g id="coverGroup" class="transition-all duration-700 ease-in-out" style="transform-origin: 200px 220px;">
+                        <path d="M 40 220 A 160 160 0 0 1 360 220 L 200 220 Z" fill="#162e47" opacity="1" />
+                        <path d="M 190 80 L 210 80 L 200 70 Z" fill="#34495e" /> 
+                    </g>
+
+                    <!-- Marcadores -->
+                    <text x="50" y="210" fill="#bdc3c7" font-size="12" font-weight="bold">0%</text>
+                    <text x="190" y="55" fill="#bdc3c7" font-size="12" font-weight="bold">50%</text>
+                    <text x="320" y="210" fill="#bdc3c7" font-size="12" font-weight="bold">100%</text>
+
+                    <!-- Agulha -->
+                    <g id="needleGroup" transform="rotate(0 200 220)" class="needle-shadow">
+                        <path d="M 195 220 L 200 50 L 205 220 Z" fill="#d63031" />
+                        <circle cx="200" cy="50" r="4" fill="white" />
+                    </g>
+
+                    <!-- Botão Central -->
+                    <circle cx="200" cy="220" r="35" fill="#c0392b" />
+                    <circle cx="200" cy="220" r="30" fill="url(#knobGradient)" stroke="#96281b" stroke-width="1" />
+                </svg>
+                
+                <!-- Área de Toque Invisível -->
+                <div id="touchArea" class="absolute inset-0 z-20 cursor-pointer"></div>
+            </div>
+
+            <!-- CONTROLES -->
+            <div id="instructionsArea" class="min-h-[140px] pt-4">
+                <div id="stateMedium" class="hidden animate-fade-in bg-slate-50 p-4 rounded-xl border border-slate-200">
+                    <div class="text-[#162e47] font-bold text-xs uppercase mb-2 flex items-center justify-center gap-2">
+                        <i data-lucide="eye"></i> Visão do Médium
+                    </div>
+                    <p class="text-slate-600 mb-2 text-sm">Memorize o alvo e dê sua dica.</p>
+                    
+                    <!-- Área de Dica -->
+                    <div id="tipContainer" class="mb-4 hidden text-xs bg-yellow-100 text-yellow-800 p-2 rounded border border-yellow-200 italic">
+                        💡 <span id="tipText"></span>
+                    </div>
+                    <button id="btnTip" onclick="showTip()" class="mb-4 text-xs text-slate-400 underline hover:text-[#162e47] flex items-center justify-center gap-1 w-full">
+                        <i data-lucide="lightbulb" class="w-3 h-3"></i> Sem ideias? Ver exemplo
+                    </button>
+
+                    <button onclick="hideTarget()" class="w-full bg-[#162e47] hover:bg-[#2c3e50] text-white font-bold py-3 px-6 rounded-lg shadow-md flex justify-center gap-2">
+                        <i data-lucide="eye-off"></i> Esconder Alvo
+                    </button>
+                </div>
+
+                <div id="stateGuessing" class="hidden animate-fade-in bg-slate-50 p-4 rounded-xl border border-slate-200">
+                    <div class="text-[#e17055] font-bold text-xs uppercase mb-2 flex items-center justify-center gap-2">
+                        <i data-lucide="users"></i> Vez do Grupo
+                    </div>
+                    <p class="text-slate-600 mb-4 text-sm">Clique no mostrador para posicionar o ponteiro.</p>
+                    <button onclick="revealResult()" class="w-full bg-[#00b894] hover:bg-[#00a383] text-white font-bold py-3 px-6 rounded-lg shadow-md flex justify-center gap-2">
+                        <i data-lucide="check"></i> Confirmar
+                    </button>
+                </div>
+
+                <div id="stateResult" class="hidden animate-fade-in">
+                    <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 flex flex-col items-center">
+                        <div id="resultMessage" class="font-black text-xl mb-2"></div>
+                        <div class="text-5xl font-black text-[#162e47] mb-4">+<span id="roundPoints">0</span></div>
+                        
+                        <!-- Botão Principal (Modo Clássico) -->
+                        <button id="btnNextAction" onclick="handleNextAction()" class="bg-[#162e47] hover:bg-[#2c3e50] text-white font-bold py-3 px-8 rounded-full shadow-lg flex justify-center gap-2">
+                            <!-- JS preenche -->
+                        </button>
+
+                        <!-- Input para Próxima Rodada (Modo Livre) -->
+                        <div id="resultCustomInputArea" class="hidden w-full mt-2 pt-4 border-t border-slate-200">
+                            <p class="text-xs text-slate-500 mb-2 font-bold uppercase tracking-wider">Próxima Rodada</p>
+                            <div class="flex gap-2 mb-3">
+                                <input id="nextCustomLeft" type="text" placeholder="Ex: Frio" class="w-1/2 p-3 rounded-lg border border-slate-300 text-center text-sm font-bold text-slate-700 focus:outline-none focus:border-[#162e47] shadow-sm">
+                                <input id="nextCustomRight" type="text" placeholder="Ex: Quente" class="w-1/2 p-3 rounded-lg border border-slate-300 text-center text-sm font-bold text-slate-700 focus:outline-none focus:border-[#162e47] shadow-sm">
+                            </div>
+                            <div class="flex gap-2">
+                                <button onclick="resetToMenu()" class="w-1/3 bg-slate-200 hover:bg-slate-300 text-slate-600 font-bold py-3 rounded-lg text-sm transition-colors">
+                                    Menu
+                                </button>
+                                <button onclick="startNextCustomRound()" class="w-2/3 bg-[#162e47] hover:bg-[#2c3e50] text-white font-bold py-3 rounded-lg shadow-md text-sm flex items-center justify-center gap-2 transition-colors">
+                                    Jogar <i data-lucide="play" class="w-4 h-4"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        const RAW_CARDS = [
+            { l: 'Solteiro', r: 'Namorando', tips: ['Ficando (Meio)', 'Amizade Colorida (Meio)', 'Casados há 50 anos (Dir)', 'Tinder instalado (Esq)'] },
+            { l: 'Essencial', r: 'Desnecessário', tips: ['Arroz e Feijão (Esq)', 'Guardanapo de pano (Meio)', 'Luz de LED no PC (Dir)'] },
+            { l: 'Herói', r: 'Vilão', tips: ['Homem-Aranha (Esq)', 'Loki (Meio)', 'Thanos (Dir)'] },
+            { l: 'Inútil no Apocalipse', r: 'Essencial no Apocalipse', tips: ['Influencer Digital (Esq)', 'Saber fazer fogo (Dir)', 'Baralho de cartas (Meio)'] },
+            { l: 'Feio', r: 'Bonito', tips: ['Pug (Depende de quem vê)', 'Boleto pago (Dir)', 'Unha encravada (Esq)'] },
+            { l: 'Barato', r: 'Caro', tips: ['Água da torneira (Esq)', 'iPhone (Dir)', 'Café de padaria (Meio)'] },
+            
+            ['Muito Cringe', 'Descolado'], ['Filme Cult', 'Blockbuster'], ['Pior sensação do mundo', 'Melhor sensação do mundo'],
+            ['Comida de Rua', 'Alta Gastronomia'], ['Fácil de aprender', 'Impossível de dominar'], ['Pessoa Tímida', 'Alma da Festa'],
+            ['Superestimado', 'Subestimado'], ['Trabalho', 'Hobby'], ['Mentira reconfortante', 'Verdade dolorosa'],
+            ['Música Ruim', 'Hino Atemporal'], ['Passado', 'Futuro'], ['Racional', 'Emocional'], ['Talento natural', 'Esforço puro'],
+            ['Moda passageira', 'Clássico'], ['Irritante', 'Adorável'], ['Ficção', 'Realidade'], ['Saboroso', 'Saudável'],
+            ['Segredo', 'Fofoca'], ['Gênio', 'Idiota'], ['Caótico', 'Organizado'], ['Introvertido', 'Extrovertido'],
+            ['Líder', 'Seguidor'], ['Otimista', 'Pessimista'], ['Egoísta', 'Altruísta'], ['Coração', 'Cérebro'],
+            ['Ingênuo', 'Malicioso'], ['Preguiçoso', 'Workaholic'], ['Humilde', 'Arrogante'], ['Corajoso', 'Covarde'],
+            ['Conservador', 'Liberal'], ['Hipster', 'Mainstream'], ['Nerd', 'Popular'], ['Matutino', 'Noturno'],
+            ['Gosta de Gatos', 'Gosta de Cachorros'], ['Paciente', 'Impulsivo'], ['Idealista', 'Realista'], ['Espiritualizado', 'Cético'],
+            ['Minimalista', 'Acumulador'], ['Aventureiro', 'Caseiro'], ['Independente', 'Carente'], ['Pontual', 'Sempre atrasado'],
+            ['Sincero', 'Falso'], ['Engraçado', 'Sério'], ['Romântico', 'Prático'], ['Sedutor', 'Assustador'],
+            ['Inocente', 'Culpado'], ['Normal', 'Estranho'], ['Confiável', 'Suspeito'], ['Duro', 'Mole'],
+            ['Seco', 'Molhado'], ['Quente', 'Frio'], ['Áspero', 'Liso'], ['Redondo', 'Quadrado'], ['Pesado', 'Leve'],
+            ['Temporário', 'Permanente'], ['Finito', 'Infinito'], ['Analógico', 'Digital'], ['Manual', 'Automático'],
+            ['Rústico', 'Futurista'], ['Sintético', 'Orgânico'], ['Colorido', 'Preto e Branco'], ['Silencioso', 'Barulhento'],
+            ['Frágil', 'Indestrutível'], ['Transparente', 'Opaco'], ['Rápido', 'Lento'], ['Afiado', 'Cego'],
+            ['Brilhante', 'Fosco'], ['Sólido', 'Líquido'], ['Puro', 'Misturado'], ['Vazio', 'Cheio'], ['Apertado', 'Folgado'],
+            ['Limpo', 'Sujo'], ['Arrumado', 'Bagunçado'], ['Claro', 'Escuro'], ['Reto', 'Curvo'], ['Simples', 'Complexo'],
+            ['Forte', 'Fraco'], ['Novo', 'Velho'], ['Star Wars', 'Star Trek'], ['Marvel', 'DC'], ['Beatles', 'Rolling Stones'],
+            ['Livro', 'Filme'], ['Série', 'Novela'], ['Comédia', 'Drama'], ['Terror', 'Romance'], ['Pop', 'Rock'],
+            ['Anos 80', 'Anos 2020'], ['Youtube', 'TikTok'], ['Playstation', 'Xbox'], ['PC Gamer', 'Console'],
+            ['Dublado', 'Legendado'], ['Herói de Ação', 'Protagonista Dramático'], ['Vilão Simpático', 'Vilão Odioso'],
+            ['Final Feliz', 'Final Triste'], ['Spoilers', 'Surpresa'], ['Original', 'Remake'], ['Avatar (Filme)', 'Avatar (Anime)'],
+            ['Disney', 'Pixar'], ['Harry Potter', 'Senhor dos Anéis'], ['Funk', 'Sertanejo'], ['Indie', 'Comercial'],
+            ['Single', 'Álbum Completo'], ['Ao vivo', 'Estúdio'], ['Reality Show', 'Documentário'], ['Influencer', 'Celebridade Real'],
+            ['Meme Velho', 'Meme Novo'], ['Textão', 'Vídeo Curto'], ['Twitter', 'Instagram'], ['Doce', 'Salgado'],
+            ['Café', 'Chá'], ['Pizza', 'Hambúrguer'], ['Cerveja', 'Vinho'], ['Chocolate', 'Baunilha'], ['Cru', 'Bem Passado'],
+            ['Apimentado', 'Suave'], ['Vegano', 'Carnívoro'], ['Caseiro', 'Industrializado'], ['Gourmet', 'Podrão'],
+            ['Café da Manhã', 'Jantar'], ['Comer com a mão', 'Usar talheres'], ['Borda Recheada', 'Sem Borda'], ['Coca-Cola', 'Pepsi'],
+            ['Nutella', 'Raiz'], ['Fruta', 'Vegetal'], ['Quente', 'Gelado'], ['Sopa é janta', 'Sopa não é janta'],
+            ['Crocante', 'Borrachudo'], ['Amargo', 'Azedo'], ['Segunda-feira', 'Sexta-feira'], ['Natal', 'Carnaval'],
+            ['Dia de Chuva', 'Dia de Sol'], ['Praia', 'Montanha'], ['Cidade', 'Campo'], ['Inverno', 'Verão'],
+            ['Banho Gelado', 'Banho Quente'], ['Acordar Cedo', 'Dormir Tarde'], ['Trânsito', 'Estrada Livre'], ['Festa', 'Netflix'],
+            ['Casamento', 'Divórcio'], ['Primeiro Encontro', 'Término'], ['Escola', 'Faculdade'], ['Chefe', 'Estagiário'],
+            ['Home Office', 'Presencial'], ['Avião', 'Navio'], ['Hotel', 'Camping'], ['Museu', 'Parque de Diversões'],
+            ['Shopping', 'Parque'], ['Elevador', 'Escada'], ['Sofá', 'Cama'], ['Solteiro', 'Namorando'], ['Criança', 'Idoso'],
+            ['Rico', 'Pobre'], ['Guerra', 'Paz'], ['Inofensivo', 'Mortal'], ['Normal ter 1', 'Estranho ter 100'],
+            ['Parece comestível', 'É comestível'], ['Acontece em filme', 'Acontece na vida real'], ['Batman', 'Coringa'],
+            ['Legal', 'Ilegal'], ['Ético', 'Imoral'], ['Justo', 'Injusto'], ['Ciência', 'Fé'], ['Sorte', 'Habilidade'],
+            ['Utopia', 'Distopia'], ['Sonho', 'Pesadelo'], ['Paraíso', 'Inferno'], ['Lixo', 'Tesouro'], ['Brega', 'Chique'],
+            ['Necessidade', 'Luxo'], ['Utilidade Pública', 'Desserviço'], ['Causa Orgulho', 'Causa Vergonha'],
+            ['Superpoder Inútil', 'Superpoder OP'], ['Dói Pouco', 'Dói Muito'], ['Cheiro Bom', 'Cheiro Ruim'],
+            ['Instinto', 'Planejamento'], ['Teoria', 'Prática'], ['Qualidade', 'Quantidade'], ['Original', 'Cópia'],
+            ['Exatas', 'Humanas'], ['Arte', 'Vandalismo'], ['Esporte', 'Jogo'], ['Físico', 'Mental'], ['Solução', 'Problema'],
+            ['Presente Ruim', 'Presente Bom'], ['Sexy', 'Vulgar'], ['Tabu', 'Conversa de Bar'], ['Seguro', 'Perigoso'],
+            ['Conhecido', 'Desconhecido'], ['Amigo', 'Inimigo'], ['Mestre', 'Aprendiz'], ['Vitória', 'Derrota'],
+            ['Começo', 'Fim'], ['Tudo', 'Nada'], ['Preto', 'Branco'], ['Ordem', 'Caos'], ['Liberdade', 'Segurança'],
+            ['Democracia', 'Ditadura'], ['Amor', 'Ódio'], ['Vida', 'Morte'], ['Deus', 'Diabo'], ['Alien', 'Fantasma'],
+            ['Robô', 'Humano'], ['Dinossauro', 'Dragão'], ['Pirata', 'Ninja'], ['Vampiro', 'Lobisomem'],
+            ['Zumbi', 'Frankenstein'], ['Magia', 'Tecnologia']
+        ];
+
+        let score = 0;
+        let targetAngle = 90; 
+        let guessAngle = 90;
+        let isDragging = false;
+        let gameState = 'intro'; 
+        let currentMode = 'classic'; 
+        let currentCardTips = [];
+
+        const needleGroup = document.getElementById('needleGroup');
+        const touchArea = document.getElementById('touchArea');
+        const targetZones = document.getElementById('targetZones');
+        const coverGroup = document.getElementById('coverGroup');
+        const scoreDisplay = document.getElementById('scoreDisplay');
+        const customInputArea = document.getElementById('customInputArea');
+        const btnSkip = document.getElementById('btnSkip');
+        const btnNextAction = document.getElementById('btnNextAction');
+        const resultCustomInputArea = document.getElementById('resultCustomInputArea');
+        const tipContainer = document.getElementById('tipContainer');
+        const tipText = document.getElementById('tipText');
+        const btnTip = document.getElementById('btnTip');
+
+        lucide.createIcons();
+
+        function toggleCustomMode() {
+            customInputArea.classList.toggle('hidden');
+        }
+
+        function getCardData(rawCard) {
+            if (Array.isArray(rawCard)) {
+                return { l: rawCard[0], r: rawCard[1], tips: [] };
+            }
+            return rawCard;
+        }
+
+        function startGame(mode, specificL, specificR) {
+            currentMode = mode; 
+
+            let leftText = "ESQUERDA";
+            let rightText = "DIREITA";
+            currentCardTips = [];
+
+            if (mode === 'classic') {
+                const raw = RAW_CARDS[Math.floor(Math.random() * RAW_CARDS.length)];
+                const card = getCardData(raw);
+                leftText = card.l;
+                rightText = card.r;
+                currentCardTips = card.tips || [];
+                btnSkip.classList.remove('hidden'); 
+            } else if (mode === 'custom') {
+                // Se foram passados argumentos (do resultado), usa eles
+                if (specificL && specificR) {
+                    leftText = specificL;
+                    rightText = specificR;
+                } else {
+                    // Senão, tenta ler do menu inicial
+                    const cLeft = document.getElementById('customLeft').value.trim();
+                    const cRight = document.getElementById('customRight').value.trim();
+                    
+                    if(!cLeft || !cRight) {
+                        alert("Por favor, preencha os dois campos do conceito!");
+                        return;
+                    }
+                    leftText = cLeft;
+                    rightText = cRight;
+                }
+                
+                btnSkip.classList.add('hidden'); 
+                
+                // Limpa todos os inputs
+                document.getElementById('customLeft').value = "";
+                document.getElementById('customRight').value = "";
+                document.getElementById('nextCustomLeft').value = "";
+                document.getElementById('nextCustomRight').value = "";
+            }
+
+            document.getElementById('conceptLeft').innerText = leftText;
+            document.getElementById('conceptRight').innerText = rightText;
+
+            // Reset UI de Dicas
+            tipContainer.classList.add('hidden');
+            if (currentCardTips.length > 0 && mode === 'classic') {
+                btnTip.classList.remove('hidden');
+            } else {
+                btnTip.classList.add('hidden');
+            }
+
+            // Sortear alvo
+            targetAngle = Math.floor(Math.random() * 140) + 20;
+            guessAngle = 90;
+            updateNeedleVisual();
+            drawTargetZones(targetAngle);
+
+            document.getElementById('screenIntro').classList.add('hidden');
+            document.getElementById('screenGame').classList.remove('hidden');
+            customInputArea.classList.add('hidden'); 
+            
+            setGameState('medium');
+        }
+
+        function startNextCustomRound() {
+            const cLeft = document.getElementById('nextCustomLeft').value.trim();
+            const cRight = document.getElementById('nextCustomRight').value.trim();
+            
+            if(!cLeft || !cRight) {
+                alert("Por favor, preencha os dois campos para a próxima rodada!");
+                return;
+            }
+            startGame('custom', cLeft, cRight);
+        }
+
+        function showTip() {
+            if (currentCardTips.length > 0) {
+                const tip = currentCardTips[Math.floor(Math.random() * currentCardTips.length)];
+                tipText.innerText = tip;
+                tipContainer.classList.remove('hidden');
+            }
+        }
+
+        function skipCard() {
+            if (currentMode === 'classic') {
+                const raw = RAW_CARDS[Math.floor(Math.random() * RAW_CARDS.length)];
+                const card = getCardData(raw);
+                document.getElementById('conceptLeft').innerText = card.l;
+                document.getElementById('conceptRight').innerText = card.r;
+                currentCardTips = card.tips || [];
+                
+                tipContainer.classList.add('hidden');
+                if (currentCardTips.length > 0) {
+                    btnTip.classList.remove('hidden');
+                } else {
+                    btnTip.classList.add('hidden');
+                }
+            }
+        }
+
+        function handleNextAction() {
+            if (currentMode === 'classic') {
+                startGame('classic');
+            } else {
+                resetToMenu();
+            }
+        }
+
+        function resetToMenu() {
+            document.getElementById('screenGame').classList.add('hidden');
+            document.getElementById('screenIntro').classList.remove('hidden');
+            document.getElementById('customLeft').value = "";
+            document.getElementById('customRight').value = "";
+            document.getElementById('nextCustomLeft').value = "";
+            document.getElementById('nextCustomRight').value = "";
+        }
+
+        function setGameState(state) {
+            gameState = state;
+            ['stateMedium', 'stateGuessing', 'stateResult'].forEach(id => {
+                document.getElementById(id).classList.add('hidden');
+            });
+
+            if (state === 'medium') {
+                document.getElementById('stateMedium').classList.remove('hidden');
+                coverGroup.style.transform = "scale(0)"; 
+                targetZones.classList.remove('opacity-0');
+                touchArea.style.pointerEvents = 'none'; 
+                if(currentMode === 'classic') btnSkip.classList.remove('hidden');
+            } else if (state === 'guessing') {
+                document.getElementById('stateGuessing').classList.remove('hidden');
+                coverGroup.style.transform = "scale(1)"; 
+                targetZones.classList.add('opacity-0'); 
+                touchArea.style.pointerEvents = 'auto'; 
+                btnSkip.classList.add('hidden');
+            } else if (state === 'result') {
+                document.getElementById('stateResult').classList.remove('hidden');
+                coverGroup.style.transform = "scale(0)"; 
+                targetZones.classList.remove('opacity-0');
+                touchArea.style.pointerEvents = 'none';
+                btnSkip.classList.add('hidden');
+            }
+        }
+
+        function hideTarget() { setGameState('guessing'); }
+
+        function revealResult() {
+            const diff = Math.abs(targetAngle - guessAngle);
+            let points = 0;
+            let msg = "Passou longe...";
+            let colorClass = "text-slate-400";
+
+            if (diff <= 4) {
+                points = 4;
+                msg = "NA MOSCA!";
+                colorClass = "text-[#00b894]";
+            } else if (diff <= 12) {
+                points = 3;
+                msg = "Muito Perto!";
+                colorClass = "text-[#ff4757]";
+            } else if (diff <= 22) {
+                points = 2;
+                msg = "Na área!";
+                colorClass = "text-[#ffa502]";
+            }
+
+            score += points;
+            scoreDisplay.innerText = score;
+            document.getElementById('roundPoints').innerText = points;
+            const msgEl = document.getElementById('resultMessage');
+            msgEl.innerText = msg;
+            msgEl.className = `font-black text-xl mb-2 ${colorClass}`;
+
+            if (currentMode === 'classic') {
+                btnNextAction.classList.remove('hidden');
+                resultCustomInputArea.classList.add('hidden');
+                btnNextAction.innerHTML = '<i data-lucide="refresh-cw"></i> Próxima Rodada';
+            } else {
+                btnNextAction.classList.add('hidden'); 
+                resultCustomInputArea.classList.remove('hidden'); 
+            }
+            lucide.createIcons();
+
+            setGameState('result');
+        }
+
+        function updateNeedleVisual() {
+            const rotation = guessAngle - 90;
+            needleGroup.setAttribute('transform', `rotate(${rotation} 200 220)`);
+        }
+
+        function handleInput(clientX, clientY) {
+            const rect = touchArea.getBoundingClientRect();
+            const pivotRatio = 220 / 230; 
+            const centerX = rect.left + rect.width / 2;
+            const centerY = rect.top + (rect.height * pivotRatio);
+
+            const dx = clientX - centerX;
+            const dy = clientY - centerY;
+
+            let angleRad = Math.atan2(dy, dx);
+            let angleDeg = angleRad * (180 / Math.PI);
+
+            let gameAngle = 0;
+
+            if (angleDeg >= -180 && angleDeg <= 0) {
+                gameAngle = angleDeg + 180;
+            } else {
+                if (angleDeg > 0 && angleDeg < 90) {
+                    gameAngle = 180; 
+                } else {
+                    gameAngle = 0;
+                }
+            }
+            gameAngle = Math.max(0, Math.min(180, gameAngle));
+            guessAngle = gameAngle;
+            updateNeedleVisual();
+        }
+
+        const startInput = (e) => {
+            if (gameState !== 'guessing') return;
+            isDragging = true;
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+            handleInput(clientX, clientY);
+        };
+
+        const moveInput = (e) => {
+            if (!isDragging) return;
+            e.preventDefault();
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+            handleInput(clientX, clientY);
+        };
+
+        const endInput = () => { isDragging = false; };
+
+        touchArea.addEventListener('mousedown', startInput);
+        touchArea.addEventListener('touchstart', startInput, {passive: false});
+        window.addEventListener('mousemove', moveInput);
+        window.addEventListener('touchmove', moveInput, {passive: false});
+        window.addEventListener('mouseup', endInput);
+        window.addEventListener('touchend', endInput);
+
+        function polarToCartesian(cx, cy, r, angleDeg) {
+            const angleRad = (angleDeg - 180) * Math.PI / 180.0;
+            return {
+                x: cx + (r * Math.cos(angleRad)),
+                y: cy + (r * Math.sin(angleRad))
+            };
+        }
+
+        function describeArc(x, y, radius, startAngle, endAngle) {
+            const start = polarToCartesian(x, y, radius, endAngle);
+            const end = polarToCartesian(x, y, radius, startAngle);
+            const largeArcFlag = endAngle - startAngle <= 180 ? "0" : "1";
+            return ["M", start.x, start.y, "A", radius, radius, 0, largeArcFlag, 0, end.x, end.y, "L", x, y, "Z"].join(" ");
+        }
+
+        function drawTargetZones(center) {
+            targetZones.innerHTML = '';
+            const cx = 200, cy = 220, r = 160;
+            
+            const zones = [
+                { w: 22, color: "#ffa502" },
+                { w: 12, color: "#ff4757" },
+                { w: 4,  color: "#00b894", stroke: true }
+            ];
+
+            zones.forEach(z => {
+                const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+                path.setAttribute("d", describeArc(cx, cy, r, center - z.w, center + z.w));
+                path.setAttribute("fill", z.color);
+                if(z.stroke) {
+                    path.setAttribute("stroke", "white");
+                    path.setAttribute("stroke-width", "2");
+                }
+                targetZones.appendChild(path);
+            });
+        }
+    </script>
+</body>
+</html>
