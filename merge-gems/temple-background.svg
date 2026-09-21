@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="600" height="1000" viewBox="0 0 600 1000" preserveAspectRatio="none">
+<defs>
+ <linearGradient id="stone" x2="1" y2="1"><stop stop-color="#192329"/><stop offset=".45" stop-color="#344047"/><stop offset="1" stop-color="#10191f"/></linearGradient>
+ <radialGradient id="chamber" cx="48%" cy="34%" r="80%"><stop stop-color="#775526"/><stop offset=".55" stop-color="#533718"/><stop offset="1" stop-color="#241b12"/></radialGradient>
+ <linearGradient id="gold" x2="0" y2="1"><stop stop-color="#51300d"/><stop offset=".25" stop-color="#d7942d"/><stop offset=".5" stop-color="#f6cc71"/><stop offset=".66" stop-color="#9f5716"/><stop offset="1" stop-color="#41240c"/></linearGradient>
+ <radialGradient id="fire"><stop stop-color="#ffefab" stop-opacity=".7"/><stop offset=".22" stop-color="#ffad32" stop-opacity=".32"/><stop offset="1" stop-color="#ee7c16" stop-opacity="0"/></radialGradient>
+ <filter id="grain"><feTurbulence type="fractalNoise" baseFrequency=".065" numOctaves="3" seed="9"/><feColorMatrix type="saturate" values="0"/><feComponentTransfer><feFuncA type="linear" slope=".13"/></feComponentTransfer><feBlend in="SourceGraphic" mode="soft-light"/></filter>
+ <pattern id="carvings" width="46" height="105" patternUnits="userSpaceOnUse"><rect width="46" height="105" fill="url(#stone)"/><path d="M5 5H41V99H5ZM11 15H33V39H20V28H27M11 53H34V85H17V68H26" fill="none" stroke="#6d777b" stroke-opacity=".4" stroke-width="3"/><path d="M7 8V101H44M14 18H36V42H23" fill="none" stroke="#02080e" stroke-opacity=".7" stroke-width="2"/></pattern>
+ <g id="mask">
+  <path d="M-62-60H62L79-28 67 53 32 90H-32L-67 53-79-28Z" fill="#243139" stroke="#91927b" stroke-width="4"/>
+  <path d="M-52-39H52L42-15H12L0-28-12-15H-42ZM-47 0L-12 8-22 20H-43ZM47 0L12 8 22 20H43ZM0-15L-11 37H11ZM-30 49H30L20 64H-20Z" fill="#0b171b" stroke="#b49a59" stroke-width="3"/>
+  <path d="M-48 29L-35 38-31 68M48 29L35 38 31 68M-63-48L-45-62H45L63-48" fill="none" stroke="#546069" stroke-width="6"/>
+  <path d="M-8-59V-40H8V-59" fill="#d5a14a"/>
+ </g>
+</defs>
+<rect width="600" height="1000" fill="url(#chamber)"/>
+<g filter="url(#grain)"><rect x="43" y="12" width="514" height="976" fill="url(#chamber)"/>
+<!-- Long fractures and worn relief, rather than a tiled game grid. -->
+<g fill="none" stroke="#180f09" stroke-opacity=".27" stroke-width="2"><path d="M102 0L95 90 132 126 113 167 122 216M96 90L67 105M113 167L81 190M518 80L484 180 501 239 471 279M484 180L450 191M471 279L480 329M78 649L114 695 108 756 137 810 119 925M108 756L79 782M548 790L508 814 490 875 501 926 470 1000"/></g>
+<g opacity=".085" fill="none" stroke="#f4d190" stroke-width="3"><path d="M169 371H431V636H169Z M185 387H415V620H185Z"/><path d="M218 421H382V581H218Z M236 439H364V563H236Z"/><path d="M300 397L400 501 300 603 200 501Z"/></g>
+<use href="#mask" transform="translate(300 505) scale(1.05)" opacity=".1"/>
+</g>
+<rect x="0" y="0" width="43" height="1000" fill="url(#carvings)"/>
+<rect x="557" y="0" width="43" height="1000" fill="url(#carvings)"/>
+<path d="M44 0V1000M556 0V1000" stroke="#080e12" stroke-width="7"/>
+<path d="M48 0V1000M552 0V1000" stroke="#c28c37" stroke-opacity=".48" stroke-width="2"/>
+<rect x="36" y="0" width="528" height="15" rx="4" fill="url(#gold)"/>
+<rect x="36" y="984" width="528" height="16" rx="4" fill="url(#gold)"/>
+<use href="#mask" transform="translate(22 78) scale(.29)"/>
+<use href="#mask" transform="translate(578 78) scale(.29)"/>
+<ellipse cx="34" cy="290" rx="123" ry="190" fill="url(#fire)"/>
+<ellipse cx="570" cy="675" rx="128" ry="192" fill="url(#fire)"/>
+<g fill="#302111" stroke="#b88434" stroke-width="2"><path d="M8 305H36L31 321H13Z M564 690H592L587 706H569Z"/></g>
+<g fill="#ffb52b"><path d="M14 305Q7 286 22 271Q18 286 29 293L29 305Z"/><path d="M570 690Q565 674 579 653Q575 675 586 679L585 690Z"/></g>
+<g fill="#fff0ae"><path d="M18 305Q14 295 23 286L24 305Z"/><path d="M575 690Q570 680 580 670L582 690Z"/></g>
+</svg>
+
